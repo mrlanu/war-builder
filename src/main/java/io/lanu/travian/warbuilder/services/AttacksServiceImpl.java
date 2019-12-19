@@ -3,6 +3,7 @@ package io.lanu.travian.warbuilder.services;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.*;
 import com.gargoylesoftware.htmlunit.util.Cookie;
+import io.lanu.travian.warbuilder.models.AttackRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.net.URL;
 import java.net.http.HttpClient;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -64,5 +66,10 @@ public class AttacksServiceImpl implements AttacksService{
         }
 
         return heroName;
+    }
+
+    @Override
+    public void createAttack(List<AttackRequest> attackRequest) {
+
     }
 }

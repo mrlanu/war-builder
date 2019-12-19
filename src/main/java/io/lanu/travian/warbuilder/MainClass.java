@@ -1,6 +1,5 @@
 package io.lanu.travian.warbuilder;
 
-import io.lanu.travian.warbuilder.entities.WaveEntity;
 import io.lanu.travian.warbuilder.repositories.WaveRepository;
 import io.lanu.travian.warbuilder.services.AttacksService;
 import org.springframework.beans.factory.annotation.Autowired;
