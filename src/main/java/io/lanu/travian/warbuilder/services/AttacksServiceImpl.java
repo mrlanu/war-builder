@@ -3,7 +3,9 @@ package io.lanu.travian.warbuilder.services;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.*;
 import com.gargoylesoftware.htmlunit.util.Cookie;
+import io.lanu.travian.warbuilder.entities.WaveEntity;
 import io.lanu.travian.warbuilder.models.AttackRequest;
+import io.lanu.travian.warbuilder.repositories.WaveRepository;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -37,12 +39,15 @@ public class AttacksServiceImpl implements AttacksService{
     @Value("${travian.user.password}")
     private String password;
 
+    private WaveRepository waveRepository;
     private WebClient webClient;
     private HttpClient httpClient;
     private String cookie;
+    private HtmlPage pSPage;
 
     @Autowired
-    public AttacksServiceImpl(WebClient webClient, HttpClient httpClient) {
+    public AttacksServiceImpl(WaveRepository waveRepository, WebClient webClient, HttpClient httpClient) {
+        this.waveRepository = waveRepository;
         this.webClient = webClient;
         this.httpClient = httpClient;
     }
@@ -72,6 +77,7 @@ public class AttacksServiceImpl implements AttacksService{
             StringBuilder cB = new StringBuilder();
             cookieSet.forEach(cookie -> cB.append(cookie));
             cookie = cB.toString();
+            pSPage = webClient.getPage(String.format("%s/build.php?tt=2&id=39",server));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -81,19 +87,31 @@ public class AttacksServiceImpl implements AttacksService{
 
     @Override
     public void createAttack(List<AttackRequest> attackRequest) {
-
+            attackRequest.forEach(a -> {
+                try {
+                    addWave(a.getTroops().toString(), a.getX().toString(), a.getY().toString());
+                    TimeUnit.MILLISECONDS.sleep(200);
+                } catch (IOException | InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
     }
 
-    public void addWave(String troops, String x, String y) throws IOException {
+    private void addWave(String troops, String x, String y) throws IOException {
 
         //setup initial values for attack
-        HtmlPage pSPage = webClient.getPage(String.format("%s/build.php?tt=2&id=39",server));
         HtmlForm attackForm = pSPage.getFormByName("snd");
         HtmlTextInput textField = attackForm.getInputByName("troops[0][t5]");
         HtmlTextInput textFieldX = attackForm.getInputByName("x");
         HtmlTextInput textFieldY = attackForm.getInputByName("y");
         HtmlRadioButtonInput radio = attackForm.getInputByName("c");
-        radio.setDefaultValue("3");
+
+        radio.reset();
+        textFieldX.reset();
+        textFieldY.reset();
+        textField.reset();
+
+        radio.setDefaultValue("4");
         textFieldX.type(x);
         textFieldY.type(y);
         textField.type(troops);
@@ -101,10 +119,11 @@ public class AttacksServiceImpl implements AttacksService{
         List<HtmlElement> inputs = attackForm.getElementsByTagName("input");
         //create parameters for request
 
+        //inputs.stream().map(i -> (HtmlInput)i).forEach(i -> System.out.println(i.getNameAttribute() + " - " + i.getValueAttribute()));
         //join everything
         String attackRequest = inputs.stream()
                 .map(i -> (HtmlInput) i)
-                .filter(i -> !i.isChecked())
+                .filter(i -> !(i.getCheckedAttribute().equals("checked")))
                 .map(i -> i.getNameAttribute() + "=" + i.getValueAttribute())
                 .collect(Collectors.joining("&"));
 
@@ -119,17 +138,18 @@ public class AttacksServiceImpl implements AttacksService{
 
         try {
             CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+
             System.out.println("Attack Request has been sent.");
             String body = response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
 
-            addAttackRequestToQueue(body);
-            System.out.println("----------------------");
+            addAttackRequestToQueue("testAttack", body);
+
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
         }
     }
 
-    private void addAttackRequestToQueue(String attackResponse){
+    private WaveEntity addAttackRequestToQueue(String attackId, String attackResponse){
         Document doc = Jsoup.parse(attackResponse);
         List<Element> link = doc.select("input");
         Element button = doc.select("#btn_ok").first();
@@ -137,8 +157,30 @@ public class AttacksServiceImpl implements AttacksService{
         String parsedResult = link
                 .stream()
                 .map(l -> l.attr("name") + "=" + l.attr("value"))
-                .collect(Collectors.joining("&", "", button.attr("name") + "=" + button.attr("value")));
+                .collect(Collectors.joining("&", "", "&" + button.attr("name") + "=" + button.attr("value")));
 
-        //attacksList.add(sParams.toString());
+        WaveEntity waveEntity = new WaveEntity(attackId, parsedResult);
+        System.out.println("Parsed result - " + parsedResult);
+        return waveRepository.save(waveEntity);
+    }
+
+    @Override
+    public void confirmAttack(String attackId) {
+        waveRepository.findAllByAttackId(attackId).forEach(waveEntity -> {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .POST(HttpRequest.BodyPublishers.ofString(waveEntity.getAttackRequest()))
+                    .uri(URI.create(String.format("%s/build.php?tt=2&id=39",server)))
+                    .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+                    .header("Cookie", cookie)
+                    .build();
+            System.out.println("Attack request - " + waveEntity.getAttackRequest());
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+            try {
+                TimeUnit.MILLISECONDS.sleep(150);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        waveRepository.deleteAll();
     }
 }
