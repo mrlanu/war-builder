@@ -21,5 +21,6 @@ public class MainClass implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         System.out.println(String.format("Hello - %s", attacksService.login()));
+        attacksService.addWave("5", "-35", "79");
     }
 }

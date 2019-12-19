@@ -4,15 +4,26 @@ import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.*;
 import com.gargoylesoftware.htmlunit.util.Cookie;
 import io.lanu.travian.warbuilder.models.AttackRequest;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 @Service
 public class AttacksServiceImpl implements AttacksService{
@@ -71,5 +82,63 @@ public class AttacksServiceImpl implements AttacksService{
     @Override
     public void createAttack(List<AttackRequest> attackRequest) {
 
+    }
+
+    public void addWave(String troops, String x, String y) throws IOException {
+
+        //setup initial values for attack
+        HtmlPage pSPage = webClient.getPage(String.format("%s/build.php?tt=2&id=39",server));
+        HtmlForm attackForm = pSPage.getFormByName("snd");
+        HtmlTextInput textField = attackForm.getInputByName("troops[0][t5]");
+        HtmlTextInput textFieldX = attackForm.getInputByName("x");
+        HtmlTextInput textFieldY = attackForm.getInputByName("y");
+        HtmlRadioButtonInput radio = attackForm.getInputByName("c");
+        radio.setDefaultValue("3");
+        textFieldX.type(x);
+        textFieldY.type(y);
+        textField.type(troops);
+
+        List<HtmlElement> inputs = attackForm.getElementsByTagName("input");
+        //create parameters for request
+
+        //join everything
+        String attackRequest = inputs.stream()
+                .map(i -> (HtmlInput) i)
+                .filter(i -> !i.isChecked())
+                .map(i -> i.getNameAttribute() + "=" + i.getValueAttribute())
+                .collect(Collectors.joining("&"));
+
+        System.out.println("Result is - " + attackRequest);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .POST(HttpRequest.BodyPublishers.ofString(attackRequest))
+                .uri(URI.create(String.format("%s/build.php?tt=2&id=39",server)))
+                .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+                .header("Cookie", cookie)
+                .build();
+
+        try {
+            CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println("Attack Request has been sent.");
+            String body = response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
+
+            addAttackRequestToQueue(body);
+            System.out.println("----------------------");
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void addAttackRequestToQueue(String attackResponse){
+        Document doc = Jsoup.parse(attackResponse);
+        List<Element> link = doc.select("input");
+        Element button = doc.select("#btn_ok").first();
+
+        String parsedResult = link
+                .stream()
+                .map(l -> l.attr("name") + "=" + l.attr("value"))
+                .collect(Collectors.joining("&", "", button.attr("name") + "=" + button.attr("value")));
+
+        //attacksList.add(sParams.toString());
     }
 }
