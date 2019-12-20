@@ -104,14 +104,15 @@ public class AttacksServiceImpl implements AttacksService{
         HtmlTextInput textField = attackForm.getInputByName("troops[0][t5]");
         HtmlTextInput textFieldX = attackForm.getInputByName("x");
         HtmlTextInput textFieldY = attackForm.getInputByName("y");
-        HtmlRadioButtonInput radio = attackForm.getInputByName("c");
+        List<HtmlInput> radio = attackForm.getInputsByName("c");
 
-        radio.reset();
+        String kindAttack = "4";
+        radio.stream().filter(i -> i.getValueAttribute().equals(kindAttack)).findFirst().get().setChecked(true);
+
         textFieldX.reset();
         textFieldY.reset();
         textField.reset();
 
-        radio.setDefaultValue("4");
         textFieldX.type(x);
         textFieldY.type(y);
         textField.type(troops);
@@ -123,7 +124,7 @@ public class AttacksServiceImpl implements AttacksService{
         //join everything
         String attackRequest = inputs.stream()
                 .map(i -> (HtmlInput) i)
-                .filter(i -> !(i.getCheckedAttribute().equals("checked")))
+                .filter(i -> !(i.getNameAttribute().equals("c") && !i.isChecked()))
                 .map(i -> i.getNameAttribute() + "=" + i.getValueAttribute())
                 .collect(Collectors.joining("&"));
 
