@@ -19,6 +19,7 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -78,6 +79,8 @@ public class AttacksServiceImpl implements AttacksService{
             cookieSet.forEach(cB::append);
             cookie = cB.toString();
             pSPage = webClient.getPage(String.format("%s/build.php?tt=2&id=39",server));
+            LocalTime localTime = LocalTime.ofNanoOfDay(1576803152);
+            System.out.println("Time - " + localTime);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -141,6 +144,7 @@ public class AttacksServiceImpl implements AttacksService{
         //joining everything together
         String attackRequest = inputs.stream()
                 .map(i -> (HtmlInput) i)
+                .filter(i -> !i.getNameAttribute().equals("redeployHero"))
                 .filter(i -> !(i.getNameAttribute().equals("c") && !i.isChecked()))
                 .map(i -> i.getNameAttribute() + "=" + i.getValueAttribute())
                 .collect(Collectors.joining("&"));
