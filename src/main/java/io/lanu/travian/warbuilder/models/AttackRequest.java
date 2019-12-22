@@ -11,4 +11,5 @@ public class AttackRequest {
     private Integer x;
     private Integer y;
     private Integer troops;
+    private String time; // format HH:MM:SS
 }

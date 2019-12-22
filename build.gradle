@@ -29,6 +29,10 @@ dependencies {
     compile group: 'net.sourceforge.htmlunit', name: 'htmlunit', version: '2.35.0'
     // https://mvnrepository.com/artifact/org.jsoup/jsoup
     compile group: 'org.jsoup', name: 'jsoup', version: '1.12.1'
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'

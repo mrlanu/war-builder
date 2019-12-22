@@ -19,7 +19,10 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -103,24 +106,24 @@ public class AttacksServiceImpl implements AttacksService{
     @Override
     public void confirmAttack(String attackId) {
         waveRepository.findAllByAttackId(attackId).forEach(waveEntity -> {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .POST(HttpRequest.BodyPublishers.ofString(waveEntity.getAttackRequest()))
-                    .uri(URI.create(String.format("%s/build.php?tt=2&id=39",server)))
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-                    .header("Cookie", cookie)
-                    .build();
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+            sendAsyncRequest(waveEntity.getAttackRequest(), false);
             try {
                 TimeUnit.MILLISECONDS.sleep(50);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         });
+        System.out.println("Attack has been sent.");
         waveRepository.deleteAll();
     }
 
     private void addWave(String troops, String x, String y) throws IOException {
+        String requestForAttack = createRequestForAttack(troops, x, y);
+        String responseForAttack = sendAsyncRequest(requestForAttack, true);
+        addAttackRequestToQueue("testAttack", responseForAttack);
+    }
 
+    private String createRequestForAttack(String troops, String x, String y) throws IOException {
         //setup initial values for attack
         HtmlForm attackForm = pSPage.getFormByName("snd");
         HtmlTextInput textField = attackForm.getInputByName("troops[0][t5]");
@@ -151,24 +154,7 @@ public class AttacksServiceImpl implements AttacksService{
 
         System.out.println("Result is - " + attackRequest);
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(attackRequest))
-                .uri(URI.create(String.format("%s/build.php?tt=2&id=39",server)))
-                .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-                .header("Cookie", cookie)
-                .build();
-
-        try {
-            CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-
-            System.out.println("Attack Request has been sent.");
-            String body = response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
-
-            addAttackRequestToQueue("testAttack", body);
-
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            e.printStackTrace();
-        }
+        return attackRequest;
     }
 
     private void addAttackRequestToQueue(String attackId, String attackResponse){
@@ -184,5 +170,43 @@ public class AttacksServiceImpl implements AttacksService{
         WaveEntity waveEntity = new WaveEntity(attackId, parsedResult);
         System.out.println("Parsed result - " + parsedResult);
         waveRepository.save(waveEntity);
+    }
+
+
+    private String sendAsyncRequest(String request, boolean needResponseBody){
+        HttpRequest req = HttpRequest.newBuilder()
+                .POST(HttpRequest.BodyPublishers.ofString(request))
+                .uri(URI.create(String.format("%s/build.php?tt=2&id=39",server)))
+                .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+                .header("Cookie", cookie)
+                .build();
+
+        try {
+            CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString());
+            System.out.println("Request has been sent.");
+
+            if (needResponseBody){
+                return response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
+            }else return null;
+
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private long isTooClosedToAttackTime(String attackResponse, long delta){
+        Document doc = Jsoup.parse(attackResponse);
+        Element timeEl = doc.select(".in").first();
+        String time = timeEl.wholeText().split(" ")[1];
+        String[] timeArr = time.split(":");
+        if (timeArr[0].length() == 1){
+            timeArr[0] = "0" + timeArr[0];
+            time = timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2];
+        }
+        LocalTime timeToAttack = LocalTime.parse(time);
+        LocalTime nowInMoscow = LocalTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
+
+        return Duration.between(nowInMoscow, timeToAttack).toMillis();
     }
 }
