@@ -6,6 +6,8 @@ import com.gargoylesoftware.htmlunit.util.Cookie;
 import io.lanu.travian.warbuilder.entities.WaveEntity;
 import io.lanu.travian.warbuilder.models.AttackRequest;
 import io.lanu.travian.warbuilder.repositories.WaveRepository;
+import lombok.Data;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -22,6 +24,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
@@ -57,45 +60,37 @@ public class AttacksServiceImpl implements AttacksService{
     }
 
     @Override
-    public String login(){
-        String heroName = null;
+    public void scheduleAttack(List<AttackRequest> attackRequest){
+        System.out.println("Successfully logged in. Welcome - " + login());
+        // plan
+        long timeToAttack = getEstimateTimeToAttack(attackRequest);
+        LocalTime attackRequestTime = attackRequest.get(0).getTime();
+        LocalTime serverTime = LocalTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
+        long durationToAttack = Duration.between(serverTime, attackRequestTime).toMillis();
+        System.out.println("Duration to Attack - " +
+                DurationFormatUtils.formatDuration(durationToAttack, "HH:mm:ss"));
+        logout();
+        // check how far is attack's time
+        // depends on time schedule attack
+        // createAttack(attackRequest);
+    }
+
+    private long getEstimateTimeToAttack(List<AttackRequest> attackRequest){
+        long timeToAttack = 0;
+        AttackRequest firstWave = attackRequest.get(0);
         try {
-            HtmlPage startPage = webClient.getPage(server + "/dorf1.php");
-            HtmlForm loginForm = startPage.getFormByName("login");
-            HtmlButton button = loginForm.getButtonByName("s1");
-            HtmlTextInput textField = loginForm.getInputByName("name");
-            HtmlCheckBoxInput checkBoxInput = loginForm.getInputByName("lowRes");
-            checkBoxInput.setChecked(true);
-            HtmlPasswordInput textFieldPass = loginForm.getInputByName("password");
-            textField.type(userName);
-            textFieldPass.type(password);
-
-            //Village Page
-            HtmlPage currentPage = button.click();
-            HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) currentPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']").get(1);
-            heroName = htmlAnchorHeroName.asText();
-            URL url = new URL(String.format("%s/build.php?tt=2&id=39",server));
-
-            //get cookie
-            Set<Cookie> cookieSet = webClient.getCookies(url);
-            StringBuilder cB = new StringBuilder();
-            cookieSet.forEach(cB::append);
-            cookie = cB.toString();
-            pSPage = webClient.getPage(String.format("%s/build.php?tt=2&id=39",server));
-            LocalTime localTime = LocalTime.ofNanoOfDay(1576803152);
-            System.out.println("Time - " + localTime);
+            timeToAttack = addWave(firstWave.getTroops().toString(), firstWave.getX().toString(),
+                    firstWave.getY().toString(), true);
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        return heroName;
+        return timeToAttack;
     }
 
-    @Override
-    public void createAttack(List<AttackRequest> attackRequest) {
+    private void createAttack(List<AttackRequest> attackRequest) {
             attackRequest.forEach(a -> {
                 try {
-                    addWave(a.getTroops().toString(), a.getX().toString(), a.getY().toString());
+                    addWave(a.getTroops().toString(), a.getX().toString(), a.getY().toString(), false);
                     TimeUnit.MILLISECONDS.sleep(200);
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
@@ -103,8 +98,7 @@ public class AttacksServiceImpl implements AttacksService{
             });
     }
 
-    @Override
-    public void confirmAttack(String attackId) {
+    private void confirmAttack(String attackId) {
         waveRepository.findAllByAttackId(attackId).forEach(waveEntity -> {
             sendAsyncRequest(waveEntity.getAttackRequest(), false);
             try {
@@ -117,16 +111,23 @@ public class AttacksServiceImpl implements AttacksService{
         waveRepository.deleteAll();
     }
 
-    private void addWave(String troops, String x, String y) throws IOException {
+    private long addWave(String troops, String x, String y, boolean isEstimate) throws IOException {
         String requestForAttack = createRequestForAttack(troops, x, y);
         String responseForAttack = sendAsyncRequest(requestForAttack, true);
+
+        if (isEstimate){
+            return getTimeForAttack(responseForAttack);
+        }
+
         addAttackRequestToQueue("testAttack", responseForAttack);
+
+        return 0;
     }
 
     private String createRequestForAttack(String troops, String x, String y) throws IOException {
         //setup initial values for attack
         HtmlForm attackForm = pSPage.getFormByName("snd");
-        HtmlTextInput textField = attackForm.getInputByName("troops[0][t5]");
+        HtmlTextInput textField = attackForm.getInputByName("troops[0][t4]");
         HtmlTextInput textFieldX = attackForm.getInputByName("x");
         HtmlTextInput textFieldY = attackForm.getInputByName("y");
         List<HtmlInput> radio = attackForm.getInputsByName("c");
@@ -186,7 +187,8 @@ public class AttacksServiceImpl implements AttacksService{
             System.out.println("Request has been sent.");
 
             if (needResponseBody){
-                return response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
+                String body = response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
+                return body;
             }else return null;
 
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
@@ -195,7 +197,7 @@ public class AttacksServiceImpl implements AttacksService{
         return null;
     }
 
-    private long isTooClosedToAttackTime(String attackResponse, long delta){
+    private long getTimeForAttack(String attackResponse){
         Document doc = Jsoup.parse(attackResponse);
         Element timeEl = doc.select(".in").first();
         String time = timeEl.wholeText().split(" ")[1];
@@ -205,8 +207,64 @@ public class AttacksServiceImpl implements AttacksService{
             time = timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2];
         }
         LocalTime timeToAttack = LocalTime.parse(time);
-        LocalTime nowInMoscow = LocalTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
+        //long resut = Duration.between(timeToAttack, nowInMoscow).toMillis();
 
-        return Duration.between(nowInMoscow, timeToAttack).toMillis();
+        System.out.println("Time for Attack - " +
+                DurationFormatUtils.formatDuration(timeToAttack.getLong(ChronoField.MILLI_OF_DAY), "HH:mm:ss"));
+        return timeToAttack.getLong(ChronoField.MILLI_OF_DAY);
+    }
+
+    private String login(){
+        String heroName = null;
+        try {
+            pSPage = webClient.getPage(server + "/dorf1.php");
+            HtmlForm loginForm = pSPage.getFormByName("login");
+            HtmlButton button = loginForm.getButtonByName("s1");
+            HtmlTextInput textField = loginForm.getInputByName("name");
+            HtmlCheckBoxInput checkBoxInput = loginForm.getInputByName("lowRes");
+            checkBoxInput.setChecked(true);
+            HtmlPasswordInput textFieldPass = loginForm.getInputByName("password");
+            textField.type(userName);
+            textFieldPass.type(password);
+
+            //Village Page
+            HtmlPage currentPage = button.click();
+            HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) currentPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']").get(1);
+            heroName = htmlAnchorHeroName.asText();
+            URL url = new URL(String.format("%s/build.php?tt=2&id=39",server));
+
+            //get cookie
+            Set<Cookie> cookieSet = webClient.getCookies(url);
+            StringBuilder cB = new StringBuilder();
+            cookieSet.stream().filter(c -> c.toString().startsWith("J")).forEach(cB::append);
+            cookie = cB.toString();
+            pSPage = webClient.getPage(String.format("%s/build.php?tt=2&id=39",server));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return heroName;
+    }
+
+    private void logout(){
+        HtmlAnchor logoutA = pSPage.getAnchorByHref("logout.php");
+        try {
+            logoutA.click();
+            System.out.println("Logged Out");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Data
+    private class ResponseForAttackRequest{
+
+        public ResponseForAttackRequest(String request, long timeToAttack) {
+            this.request = request;
+            this.timeToAttack = timeToAttack;
+        }
+
+        private String request;
+        private long timeToAttack;
     }
 }

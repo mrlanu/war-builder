@@ -5,7 +5,5 @@ import io.lanu.travian.warbuilder.models.AttackRequest;
 import java.util.List;
 
 public interface AttacksService {
-    String login();
-    void createAttack(List<AttackRequest> attackRequest);
-    void confirmAttack(String attackId);
+    void scheduleAttack(List<AttackRequest> attackRequest);
 }
