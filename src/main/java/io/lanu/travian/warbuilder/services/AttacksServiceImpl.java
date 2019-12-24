@@ -6,13 +6,13 @@ import com.gargoylesoftware.htmlunit.util.Cookie;
 import io.lanu.travian.warbuilder.entities.WaveEntity;
 import io.lanu.travian.warbuilder.models.AttackRequest;
 import io.lanu.travian.warbuilder.repositories.WaveRepository;
-import lombok.Data;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -22,16 +22,15 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,31 +50,64 @@ public class AttacksServiceImpl implements AttacksService{
     private HttpClient httpClient;
     private String cookie;
     private HtmlPage pSPage;
+    private ThreadPoolTaskScheduler threadPoolTaskScheduler;
 
     @Autowired
-    public AttacksServiceImpl(WaveRepository waveRepository, WebClient webClient, HttpClient httpClient) {
+    public AttacksServiceImpl(WaveRepository waveRepository, WebClient webClient,
+                              HttpClient httpClient, ThreadPoolTaskScheduler threadPoolTaskScheduler) {
         this.waveRepository = waveRepository;
         this.webClient = webClient;
         this.httpClient = httpClient;
+        this.threadPoolTaskScheduler = threadPoolTaskScheduler;
     }
 
     @Override
     public void scheduleAttack(List<AttackRequest> attackRequest){
         System.out.println("Successfully logged in. Welcome - " + login());
         // plan
-        long timeToAttack = getEstimateTimeToAttack(attackRequest);
-        LocalTime attackRequestTime = attackRequest.get(0).getTime();
-        LocalTime serverTime = LocalTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
-        long durationToAttack = Duration.between(serverTime, attackRequestTime).toMillis();
-        System.out.println("Duration to Attack - " +
-                DurationFormatUtils.formatDuration(durationToAttack, "HH:mm:ss"));
+        LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
+        System.out.println("Server time - " + serverTime);
+
+        LocalDateTime attackRequestTime = attackRequest.get(0).getTime();
+        System.out.println("Requested attack time - " + attackRequestTime);
+
+        long timeForAttack = getEstimateTimeForAttack(attackRequest);
+        System.out.println("Time needed for Attack - " +
+                DurationFormatUtils.formatDuration(timeForAttack, "HH:mm:ss"));
+
+        long availableTime = Duration.between(serverTime, attackRequestTime).toMillis();
+        System.out.println("Available time - " +
+                DurationFormatUtils.formatDuration(availableTime, "HH:mm:ss"));
+
+        LocalDateTime perfectTime = serverTime.plus(availableTime, ChronoUnit.MILLIS)
+                .minus(timeForAttack, ChronoUnit.MILLIS)
+                .minus(10000, ChronoUnit.MILLIS)
+                .minus(9, ChronoUnit.HOURS);
+
+        Date sendingTime = Date.from(perfectTime.atZone( ZoneId.systemDefault()).toInstant());
+
+        if (perfectTime.isAfter(LocalDateTime.now())){
+            createTask(sendingTime, attackRequest);
+        }
         logout();
-        // check how far is attack's time
-        // depends on time schedule attack
-        // createAttack(attackRequest);
     }
 
-    private long getEstimateTimeToAttack(List<AttackRequest> attackRequest){
+    private ScheduledFuture createTask(Date sendingTime, List<AttackRequest> attackRequest){
+        System.out.println("Attack has been scheduled at - " + sendingTime);
+        return threadPoolTaskScheduler.schedule(() -> {
+            login();
+            createAttack(attackRequest);
+            try {
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            confirmAttack("testAttack");
+            System.out.println("<<<<----- All done. ------>>>>>");
+        }, sendingTime);
+    }
+
+    private long getEstimateTimeForAttack(List<AttackRequest> attackRequest){
         long timeToAttack = 0;
         AttackRequest firstWave = attackRequest.get(0);
         try {
@@ -91,7 +123,7 @@ public class AttacksServiceImpl implements AttacksService{
             attackRequest.forEach(a -> {
                 try {
                     addWave(a.getTroops().toString(), a.getX().toString(), a.getY().toString(), false);
-                    TimeUnit.MILLISECONDS.sleep(200);
+                    TimeUnit.MILLISECONDS.sleep(50);
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -153,7 +185,7 @@ public class AttacksServiceImpl implements AttacksService{
                 .map(i -> i.getNameAttribute() + "=" + i.getValueAttribute())
                 .collect(Collectors.joining("&"));
 
-        System.out.println("Result is - " + attackRequest);
+        //System.out.println("Result is - " + attackRequest);
 
         return attackRequest;
     }
@@ -169,7 +201,9 @@ public class AttacksServiceImpl implements AttacksService{
                 .collect(Collectors.joining("&", "", "&" + button.attr("name") + "=" + button.attr("value")));
 
         WaveEntity waveEntity = new WaveEntity(attackId, parsedResult);
-        System.out.println("Parsed result - " + parsedResult);
+
+        //System.out.println("Parsed result - " + parsedResult);
+
         waveRepository.save(waveEntity);
     }
 
@@ -184,7 +218,6 @@ public class AttacksServiceImpl implements AttacksService{
 
         try {
             CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString());
-            System.out.println("Request has been sent.");
 
             if (needResponseBody){
                 String body = response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
@@ -207,10 +240,7 @@ public class AttacksServiceImpl implements AttacksService{
             time = timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2];
         }
         LocalTime timeToAttack = LocalTime.parse(time);
-        //long resut = Duration.between(timeToAttack, nowInMoscow).toMillis();
 
-        System.out.println("Time for Attack - " +
-                DurationFormatUtils.formatDuration(timeToAttack.getLong(ChronoField.MILLI_OF_DAY), "HH:mm:ss"));
         return timeToAttack.getLong(ChronoField.MILLI_OF_DAY);
     }
 
@@ -254,17 +284,5 @@ public class AttacksServiceImpl implements AttacksService{
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    @Data
-    private class ResponseForAttackRequest{
-
-        public ResponseForAttackRequest(String request, long timeToAttack) {
-            this.request = request;
-            this.timeToAttack = timeToAttack;
-        }
-
-        private String request;
-        private long timeToAttack;
     }
 }

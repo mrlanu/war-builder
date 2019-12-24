@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -13,5 +13,5 @@ public class AttackRequest {
     private Integer x;
     private Integer y;
     private Integer troops;
-    private LocalTime time; // format HH:MM:SS
+    private LocalDateTime time; // format HH:MM:SS
 }
