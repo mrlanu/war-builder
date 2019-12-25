@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class AttackRequest {
     private Integer x;
     private Integer y;
-    private Integer troops;
+    private Integer kindAttack;
+    private Integer[] troops;
     private LocalDateTime time; // format HH:MM:SS
 }

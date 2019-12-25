@@ -27,6 +27,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -111,8 +112,7 @@ public class AttacksServiceImpl implements AttacksService{
         long timeToAttack = 0;
         AttackRequest firstWave = attackRequest.get(0);
         try {
-            timeToAttack = addWave(firstWave.getTroops().toString(), firstWave.getX().toString(),
-                    firstWave.getY().toString(), true);
+            timeToAttack = addWave(firstWave, true);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -122,7 +122,7 @@ public class AttacksServiceImpl implements AttacksService{
     private void createAttack(List<AttackRequest> attackRequest) {
             attackRequest.forEach(a -> {
                 try {
-                    addWave(a.getTroops().toString(), a.getX().toString(), a.getY().toString(), false);
+                    addWave(a, false);
                     TimeUnit.MILLISECONDS.sleep(50);
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
@@ -143,11 +143,11 @@ public class AttacksServiceImpl implements AttacksService{
         waveRepository.deleteAll();
     }
 
-    private long addWave(String troops, String x, String y, boolean isEstimate) throws IOException {
-        String requestForAttack = createRequestForAttack(troops, x, y);
+    private long addWave(AttackRequest attackRequest, boolean isEstimating) throws IOException {
+        String requestForAttack = createRequestForAttack(attackRequest);
         String responseForAttack = sendAsyncRequest(requestForAttack, true);
 
-        if (isEstimate){
+        if (isEstimating){
             return getTimeForAttack(responseForAttack);
         }
 
@@ -156,38 +156,40 @@ public class AttacksServiceImpl implements AttacksService{
         return 0;
     }
 
-    private String createRequestForAttack(String troops, String x, String y) throws IOException {
+    private String createRequestForAttack(AttackRequest attackRequest) throws IOException {
+        List<HtmlTextInput> inputTroopsList = new ArrayList<>();
         //setup initial values for attack
         HtmlForm attackForm = pSPage.getFormByName("snd");
-        HtmlTextInput textField = attackForm.getInputByName("troops[0][t4]");
+
         HtmlTextInput textFieldX = attackForm.getInputByName("x");
         HtmlTextInput textFieldY = attackForm.getInputByName("y");
-        List<HtmlInput> radio = attackForm.getInputsByName("c");
-
-        String kindAttack = "4";
-        radio.stream().filter(i -> i.getValueAttribute().equals(kindAttack)).findFirst().get().setChecked(true);
-
         textFieldX.reset();
         textFieldY.reset();
-        textField.reset();
+        textFieldX.type(attackRequest.getX().toString());
+        textFieldY.type(attackRequest.getY().toString());
 
-        textFieldX.type(x);
-        textFieldY.type(y);
-        textField.type(troops);
+        for (int i=1; i <= 11; i++){
+            List<HtmlInput> inpList = attackForm.getInputsByName(String.format("troops[0][t%d]", i));
+            if (inpList.size() != 0){
+                HtmlTextInput inp = (HtmlTextInput) inpList.get(0);
+                inputTroopsList.add(inp);
+                inputTroopsList.get(inputTroopsList.size() - 1).reset();
+                inputTroopsList.get(inputTroopsList.size() - 1).type(attackRequest.getTroops()[i - 1].toString());
+            }
+        }
 
-        List<HtmlElement> inputs = attackForm.getElementsByTagName("input");
+        List<HtmlInput> radio = attackForm.getInputsByName("c");
+        radio.stream().filter(i -> i.getValueAttribute().equals(attackRequest.getKindAttack().toString()))
+                .findFirst().get().setChecked(true);
 
-        //joining everything together
-        String attackRequest = inputs.stream()
+        List<HtmlElement> allInputs = attackForm.getElementsByTagName("input");
+
+        return allInputs.stream()
                 .map(i -> (HtmlInput) i)
                 .filter(i -> !i.getNameAttribute().equals("redeployHero"))
                 .filter(i -> !(i.getNameAttribute().equals("c") && !i.isChecked()))
                 .map(i -> i.getNameAttribute() + "=" + i.getValueAttribute())
                 .collect(Collectors.joining("&"));
-
-        //System.out.println("Result is - " + attackRequest);
-
-        return attackRequest;
     }
 
     private void addAttackRequestToQueue(String attackId, String attackResponse){
@@ -220,8 +222,7 @@ public class AttacksServiceImpl implements AttacksService{
             CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString());
 
             if (needResponseBody){
-                String body = response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
-                return body;
+                return response.thenApply(HttpResponse::body).get(5, TimeUnit.SECONDS);
             }else return null;
 
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
