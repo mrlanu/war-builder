@@ -93,21 +93,6 @@ public class AttacksServiceImpl implements AttacksService{
         logout();
     }
 
-    private ScheduledFuture createTask(Date sendingTime, List<AttackRequest> attackRequest){
-        System.out.println("Attack has been scheduled at - " + sendingTime);
-        return threadPoolTaskScheduler.schedule(() -> {
-            login();
-            createAttack(attackRequest);
-            try {
-                TimeUnit.SECONDS.sleep(5);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            confirmAttack("testAttack");
-            System.out.println("<<<<----- All done. ------>>>>>");
-        }, sendingTime);
-    }
-
     private long getEstimateTimeForAttack(List<AttackRequest> attackRequest){
         long timeToAttack = 0;
         AttackRequest firstWave = attackRequest.get(0);
@@ -117,30 +102,6 @@ public class AttacksServiceImpl implements AttacksService{
             e.printStackTrace();
         }
         return timeToAttack;
-    }
-
-    private void createAttack(List<AttackRequest> attackRequest) {
-            attackRequest.forEach(a -> {
-                try {
-                    addWave(a, false);
-                    TimeUnit.MILLISECONDS.sleep(50);
-                } catch (IOException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            });
-    }
-
-    private void confirmAttack(String attackId) {
-        waveRepository.findAllByAttackId(attackId).forEach(waveEntity -> {
-            sendAsyncRequest(waveEntity.getAttackRequest(), false);
-            try {
-                TimeUnit.MILLISECONDS.sleep(50);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
-        System.out.println("Attack has been sent.");
-        waveRepository.deleteAll();
     }
 
     private long addWave(AttackRequest attackRequest, boolean isEstimating) throws IOException {
@@ -192,6 +153,44 @@ public class AttacksServiceImpl implements AttacksService{
                 .collect(Collectors.joining("&"));
     }
 
+    private long getTimeForAttack(String attackResponse){
+        Document doc = Jsoup.parse(attackResponse);
+        Element timeEl = doc.select(".in").first();
+        String time = timeEl.wholeText().split(" ")[1];
+        String[] timeArr = time.split(":");
+        if (timeArr[0].length() == 1){
+            timeArr[0] = "0" + timeArr[0];
+            time = timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2];
+        }
+        LocalTime timeToAttack = LocalTime.parse(time);
+
+        return timeToAttack.getLong(ChronoField.MILLI_OF_DAY);
+    }
+
+    private void createAttack(List<AttackRequest> attackRequest) {
+            attackRequest.forEach(a -> {
+                try {
+                    addWave(a, false);
+                    TimeUnit.MILLISECONDS.sleep(50);
+                } catch (IOException | InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+    }
+
+    private void confirmAttack(String attackId) {
+        waveRepository.findAllByAttackId(attackId).forEach(waveEntity -> {
+            sendAsyncRequest(waveEntity.getAttackRequest(), false);
+            try {
+                TimeUnit.MILLISECONDS.sleep(50);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        System.out.println("Attack has been sent.");
+        waveRepository.deleteAll();
+    }
+
     private void addAttackRequestToQueue(String attackId, String attackResponse){
         Document doc = Jsoup.parse(attackResponse);
         List<Element> link = doc.select("input");
@@ -208,7 +207,6 @@ public class AttacksServiceImpl implements AttacksService{
 
         waveRepository.save(waveEntity);
     }
-
 
     private String sendAsyncRequest(String request, boolean needResponseBody){
         HttpRequest req = HttpRequest.newBuilder()
@@ -231,18 +229,19 @@ public class AttacksServiceImpl implements AttacksService{
         return null;
     }
 
-    private long getTimeForAttack(String attackResponse){
-        Document doc = Jsoup.parse(attackResponse);
-        Element timeEl = doc.select(".in").first();
-        String time = timeEl.wholeText().split(" ")[1];
-        String[] timeArr = time.split(":");
-        if (timeArr[0].length() == 1){
-            timeArr[0] = "0" + timeArr[0];
-            time = timeArr[0] + ":" + timeArr[1] + ":" + timeArr[2];
-        }
-        LocalTime timeToAttack = LocalTime.parse(time);
-
-        return timeToAttack.getLong(ChronoField.MILLI_OF_DAY);
+    private ScheduledFuture createTask(Date sendingTime, List<AttackRequest> attackRequest){
+        System.out.println("Attack has been scheduled at - " + sendingTime);
+        return threadPoolTaskScheduler.schedule(() -> {
+            login();
+            createAttack(attackRequest);
+            try {
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            confirmAttack("testAttack");
+            System.out.println("<<<<----- All done. ------>>>>>");
+        }, sendingTime);
     }
 
     private String login(){
