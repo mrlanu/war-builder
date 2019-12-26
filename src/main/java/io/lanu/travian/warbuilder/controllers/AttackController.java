@@ -3,15 +3,11 @@ package io.lanu.travian.warbuilder.controllers;
 import io.lanu.travian.warbuilder.models.AttackRequest;
 import io.lanu.travian.warbuilder.services.AttacksService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/attacks")
 public class AttackController {
 
     private AttacksService attacksService;
@@ -21,10 +17,15 @@ public class AttackController {
         this.attacksService = attacksService;
     }
 
-    @PostMapping
+    @PostMapping("/attacks")
     public String scheduleAttack(@RequestBody List<AttackRequest> attackRequest){
         attacksService.scheduleAttack(attackRequest);
         return "Attack has been created.";
+    }
+
+    @GetMapping("/troops")
+    public Integer[] getAvailableTroops(){
+        return attacksService.getAvailableTroops();
     }
 
     /*@GetMapping

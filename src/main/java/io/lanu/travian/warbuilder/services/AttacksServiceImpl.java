@@ -62,19 +62,48 @@ public class AttacksServiceImpl implements AttacksService{
         this.threadPoolTaskScheduler = threadPoolTaskScheduler;
     }
 
+    public Integer[] getAvailableTroops(){
+        Integer[] result = new Integer[11];
+        login();
+        try {
+            pSPage = webClient.getPage(String.format("%s/build.php?tt=1&id=39",server));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        DomNodeList<DomNode> divs = pSPage.querySelectorAll("table");
+        HtmlTable table = (HtmlTable) divs.get(0);
+        HtmlTableBody body = table.getBodies().get(1);
+        HtmlTableRow row = body.getRows().get(0);
+
+        int i = 0;
+        for (final HtmlTableCell cell : row.getCells()) {
+            if (cell.getAttribute("class").contains("unit")){
+                result[i] = Integer.parseInt(cell.asText());
+                i++;
+            }
+        }
+        logout();
+        return result;
+    }
+
     @Override
     public void scheduleAttack(List<AttackRequest> attackRequest){
         System.out.println("Successfully logged in. Welcome - " + login());
-        // plan
+
         LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
         System.out.println("Server time - " + serverTime);
 
         LocalDateTime attackRequestTime = attackRequest.get(0).getTime();
         System.out.println("Requested attack time - " + attackRequestTime);
 
-        long timeForAttack = getEstimateTimeForAttack(attackRequest);
-        System.out.println("Time needed for Attack - " +
-                DurationFormatUtils.formatDuration(timeForAttack, "HH:mm:ss"));
+        long timeForAttack = 0;
+        try {
+            timeForAttack = addWave(attackRequest.get(0), true);
+            System.out.println("Time needed for Attack - " +
+                    DurationFormatUtils.formatDuration(timeForAttack, "HH:mm:ss"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         long availableTime = Duration.between(serverTime, attackRequestTime).toMillis();
         System.out.println("Available time - " +
@@ -91,17 +120,6 @@ public class AttacksServiceImpl implements AttacksService{
             createTask(sendingTime, attackRequest);
         }
         logout();
-    }
-
-    private long getEstimateTimeForAttack(List<AttackRequest> attackRequest){
-        long timeToAttack = 0;
-        AttackRequest firstWave = attackRequest.get(0);
-        try {
-            timeToAttack = addWave(firstWave, true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return timeToAttack;
     }
 
     private long addWave(AttackRequest attackRequest, boolean isEstimating) throws IOException {
@@ -121,7 +139,6 @@ public class AttacksServiceImpl implements AttacksService{
         List<HtmlTextInput> inputTroopsList = new ArrayList<>();
         //setup initial values for attack
         HtmlForm attackForm = pSPage.getFormByName("snd");
-
         HtmlTextInput textFieldX = attackForm.getInputByName("x");
         HtmlTextInput textFieldY = attackForm.getInputByName("y");
         textFieldX.reset();
@@ -240,6 +257,7 @@ public class AttacksServiceImpl implements AttacksService{
                 e.printStackTrace();
             }
             confirmAttack("testAttack");
+            logout();
             System.out.println("<<<<----- All done. ------>>>>>");
         }, sendingTime);
     }
