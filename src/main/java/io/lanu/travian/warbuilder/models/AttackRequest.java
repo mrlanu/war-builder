@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AttackRequest {
+    private String attackId;
     private Integer x;
     private Integer y;
     private Integer kindAttack;

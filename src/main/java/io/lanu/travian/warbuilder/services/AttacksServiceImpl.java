@@ -31,7 +31,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @Service
@@ -123,16 +126,17 @@ public class AttacksServiceImpl implements AttacksService{
     }
 
     private long addWave(AttackRequest attackRequest, boolean isEstimating) throws IOException {
+        long result;
         String requestForAttack = createRequestForAttack(attackRequest);
         String responseForAttack = sendAsyncRequest(requestForAttack, true);
 
-        if (isEstimating){
-            return getTimeForAttack(responseForAttack);
+        result = getTimeForAttack(responseForAttack);
+
+        if (!isEstimating){
+            addAttackRequestToQueue(attackRequest.getAttackId(), responseForAttack, result);
         }
 
-        addAttackRequestToQueue("testAttack", responseForAttack);
-
-        return 0;
+        return result;
     }
 
     private String createRequestForAttack(AttackRequest attackRequest) throws IOException {
@@ -205,10 +209,10 @@ public class AttacksServiceImpl implements AttacksService{
             }
         });
         System.out.println("Attack has been sent.");
-        waveRepository.deleteAll();
+        waveRepository.deleteAllByAttackId(attackId);
     }
 
-    private void addAttackRequestToQueue(String attackId, String attackResponse){
+    private void addAttackRequestToQueue(String attackId, String attackResponse, long timeForAttack){
         Document doc = Jsoup.parse(attackResponse);
         List<Element> link = doc.select("input");
         Element button = doc.select("#btn_ok").first();
@@ -218,7 +222,9 @@ public class AttacksServiceImpl implements AttacksService{
                 .map(l -> l.attr("name") + "=" + l.attr("value"))
                 .collect(Collectors.joining("&", "", "&" + button.attr("name") + "=" + button.attr("value")));
 
-        WaveEntity waveEntity = new WaveEntity(attackId, parsedResult);
+        //parsedResult += "&troops[0][kata]=1";
+
+        WaveEntity waveEntity = new WaveEntity(attackId, timeForAttack, parsedResult);
 
         //System.out.println("Parsed result - " + parsedResult);
 
@@ -246,17 +252,23 @@ public class AttacksServiceImpl implements AttacksService{
         return null;
     }
 
-    private ScheduledFuture createTask(Date sendingTime, List<AttackRequest> attackRequest){
+    private void createTask(Date sendingTime, List<AttackRequest> attackRequest){
         System.out.println("Attack has been scheduled at - " + sendingTime);
-        return threadPoolTaskScheduler.schedule(() -> {
+        threadPoolTaskScheduler.schedule(() -> {
             login();
             createAttack(attackRequest);
+            String attackId = attackRequest.get(0).getAttackId();
+            long timeForAttack = waveRepository.findAllByAttackId(attackId).get(0).getTimeForAttack();
+            LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
+            LocalDateTime attackRequestTime = attackRequest.get(0).getTime();
+            long availableTime = Duration.between(serverTime, attackRequestTime).toMillis() - timeForAttack;
+
             try {
-                TimeUnit.SECONDS.sleep(5);
+                TimeUnit.MILLISECONDS.sleep(availableTime);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            confirmAttack("testAttack");
+            confirmAttack(attackId);
             logout();
             System.out.println("<<<<----- All done. ------>>>>>");
         }, sendingTime);
