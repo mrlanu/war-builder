@@ -141,7 +141,7 @@ public class AttacksServiceImpl implements AttacksService{
         result = getTimeForAttack(responseForAttack);
 
         if (!isEstimating){
-            addAttackRequestToQueue(attackRequest.getAttackId(), responseForAttack, result);
+            addAttackRequestToQueue(attackRequest, responseForAttack, result);
         }
 
         return result;
@@ -220,7 +220,7 @@ public class AttacksServiceImpl implements AttacksService{
         waveRepository.deleteAllByAttackId(attackId);
     }
 
-    private void addAttackRequestToQueue(String attackId, String attackResponse, long timeForAttack){
+    private void addAttackRequestToQueue(AttackRequest attackRequest, String attackResponse, long timeForAttack){
         Document doc = Jsoup.parse(attackResponse);
         List<Element> link = doc.select("input");
         Element button = doc.select("#btn_ok").first();
@@ -230,9 +230,14 @@ public class AttacksServiceImpl implements AttacksService{
                 .map(l -> l.attr("name") + "=" + l.attr("value"))
                 .collect(Collectors.joining("&", "", "&" + button.attr("name") + "=" + button.attr("value")));
 
-        //parsedResult += "&troops[0][kata]=1";
+        if (attackRequest.getTroops()[7] >= 20){
+            parsedResult += "&troops[0][kata]=" + attackRequest.getFirstTarget();
+            parsedResult += "&troops[0][kata2]=" + attackRequest.getSecondTarget();
+        }else if (attackRequest.getTroops()[7] >= 1){
+            parsedResult += "&troops[0][kata]=" + attackRequest.getFirstTarget();
+        }
 
-        WaveEntity waveEntity = new WaveEntity(attackId, timeForAttack, parsedResult);
+        WaveEntity waveEntity = new WaveEntity(attackRequest.getAttackId(), timeForAttack, parsedResult);
 
         //System.out.println("Parsed result - " + parsedResult);
 

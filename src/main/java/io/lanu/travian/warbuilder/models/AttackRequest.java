@@ -15,5 +15,7 @@ public class AttackRequest {
     private Integer y;
     private Integer kindAttack;
     private Integer[] troops;
+    private Integer firstTarget;
+    private Integer secondTarget;
     private LocalDateTime time; // format HH:MM:SS
 }
