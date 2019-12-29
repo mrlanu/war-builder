@@ -65,6 +65,7 @@ public class AttacksServiceImpl implements AttacksService{
         this.threadPoolTaskScheduler = threadPoolTaskScheduler;
     }
 
+    @Override
     public Integer[] getAvailableTroops(){
         Integer[] result = new Integer[11];
         login();
@@ -93,6 +94,18 @@ public class AttacksServiceImpl implements AttacksService{
     public void scheduleAttack(List<AttackRequest> attackRequest){
         System.out.println("Successfully logged in. Welcome - " + login());
 
+        Date sendingTime = getPerfectTime(attackRequest);
+
+        if (sendingTime.after(new Date())){
+            createTask(sendingTime, attackRequest);
+            System.out.println("Attack has been scheduled at - " + sendingTime);
+        }else {
+            System.out.println("Attack can't be scheduled. Not enough time.");
+        }
+        logout();
+    }
+
+    private Date getPerfectTime(List<AttackRequest> attackRequest){
         LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
         System.out.println("Server time - " + serverTime);
 
@@ -117,12 +130,7 @@ public class AttacksServiceImpl implements AttacksService{
                 .minus(10000, ChronoUnit.MILLIS)
                 .minus(9, ChronoUnit.HOURS);
 
-        Date sendingTime = Date.from(perfectTime.atZone( ZoneId.systemDefault()).toInstant());
-
-        if (perfectTime.isAfter(LocalDateTime.now())){
-            createTask(sendingTime, attackRequest);
-        }
-        logout();
+        return Date.from(perfectTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     private long addWave(AttackRequest attackRequest, boolean isEstimating) throws IOException {
@@ -236,8 +244,12 @@ public class AttacksServiceImpl implements AttacksService{
                 .POST(HttpRequest.BodyPublishers.ofString(request))
                 .uri(URI.create(String.format("%s/build.php?tt=2&id=39",server)))
                 .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+                .header("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36")
+                .header("origin", "https://ts2.travian.ru")
                 .header("Cookie", cookie)
                 .build();
+        String s = req.toString();
+        int i = 67;
 
         try {
             CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString());
@@ -253,7 +265,6 @@ public class AttacksServiceImpl implements AttacksService{
     }
 
     private void createTask(Date sendingTime, List<AttackRequest> attackRequest){
-        System.out.println("Attack has been scheduled at - " + sendingTime);
         threadPoolTaskScheduler.schedule(() -> {
             login();
             createAttack(attackRequest);
@@ -270,7 +281,7 @@ public class AttacksServiceImpl implements AttacksService{
             }
             confirmAttack(attackId);
             logout();
-            System.out.println("<<<<----- All done. ------>>>>>");
+            System.out.println("<<<<-----All done----->>>>");
         }, sendingTime);
     }
 
