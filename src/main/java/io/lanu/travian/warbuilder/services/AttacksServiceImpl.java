@@ -67,8 +67,11 @@ public class AttacksServiceImpl implements AttacksService{
 
     @Override
     public Integer[] getAvailableTroops(){
+
+        if (isLoggedOut()){login();}
+
         Integer[] result = new Integer[11];
-        login();
+
         try {
             pSPage = webClient.getPage(String.format("%s/build.php?tt=1&id=39",server));
         } catch (IOException e) {
@@ -87,12 +90,14 @@ public class AttacksServiceImpl implements AttacksService{
             }
         }
         logout();
+
         return result;
     }
 
     @Override
     public void scheduleAttack(List<AttackRequest> attackRequest){
-        System.out.println("Successfully logged in. Welcome - " + login());
+
+        if (isLoggedOut()){login();}
 
         Date sendingTime = getPerfectTime(attackRequest);
 
@@ -253,8 +258,6 @@ public class AttacksServiceImpl implements AttacksService{
                 .header("origin", "https://ts2.travian.ru")
                 .header("Cookie", cookie)
                 .build();
-        String s = req.toString();
-        int i = 67;
 
         try {
             CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(req, HttpResponse.BodyHandlers.ofString());
@@ -271,7 +274,9 @@ public class AttacksServiceImpl implements AttacksService{
 
     private void createTask(Date sendingTime, List<AttackRequest> attackRequest){
         threadPoolTaskScheduler.schedule(() -> {
-            login();
+
+            if (isLoggedOut()){login();}
+
             createAttack(attackRequest);
             String attackId = attackRequest.get(0).getAttackId();
             long timeForAttack = waveRepository.findAllByAttackId(attackId).get(0).getTimeForAttack();
@@ -285,12 +290,14 @@ public class AttacksServiceImpl implements AttacksService{
                 e.printStackTrace();
             }
             confirmAttack(attackId);
+
             logout();
             System.out.println("<<<<-----All done----->>>>");
+
         }, sendingTime);
     }
 
-    private String login(){
+    private void login(){
         String heroName = null;
         try {
             pSPage = webClient.getPage(server + "/dorf1.php");
@@ -304,8 +311,8 @@ public class AttacksServiceImpl implements AttacksService{
             textFieldPass.type(password);
 
             //Village Page
-            HtmlPage currentPage = button.click();
-            HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) currentPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']").get(1);
+            pSPage = button.click();
+            HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) pSPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']").get(1);
             heroName = htmlAnchorHeroName.asText();
             URL url = new URL(String.format("%s/build.php?tt=2&id=39",server));
 
@@ -319,16 +326,27 @@ public class AttacksServiceImpl implements AttacksService{
             e.printStackTrace();
         }
 
-        return heroName;
+        System.out.println("Successfully logged in. Welcome - " + heroName);
     }
 
     private void logout(){
         HtmlAnchor logoutA = pSPage.getAnchorByHref("logout.php");
         try {
-            logoutA.click();
+            pSPage = logoutA.click();
             System.out.println("Logged Out");
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private boolean isLoggedOut(){
+        if (pSPage == null){return true;}
+        String heroName = "";
+        List<HtmlElement> elements = pSPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']");
+        if (elements.size() > 0){
+            HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) elements.get(1);
+            heroName = htmlAnchorHeroName.asText();
+        }
+        return !heroName.equals(userName);
     }
 }
