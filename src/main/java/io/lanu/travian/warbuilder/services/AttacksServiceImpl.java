@@ -77,8 +77,8 @@ public class AttacksServiceImpl implements AttacksService{
         } catch (IOException e) {
             e.printStackTrace();
         }
-        DomNodeList<DomNode> divs = pSPage.querySelectorAll("table");
-        HtmlTable table = (HtmlTable) divs.get(0);
+        List<HtmlElement> nodes = pSPage.getByXPath("//table[@class='troop_details']");
+        HtmlTable table = (HtmlTable) nodes.get(0);
         HtmlTableBody body = table.getBodies().get(1);
         HtmlTableRow row = body.getRows().get(0);
 
