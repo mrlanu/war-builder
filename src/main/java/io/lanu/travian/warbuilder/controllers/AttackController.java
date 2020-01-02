@@ -2,19 +2,27 @@ package io.lanu.travian.warbuilder.controllers;
 
 import io.lanu.travian.warbuilder.models.AttackRequest;
 import io.lanu.travian.warbuilder.services.AttacksService;
+import io.lanu.travian.warbuilder.services.InformationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class AttackController {
 
     private AttacksService attacksService;
+    private InformationService informationService;
 
-    @Autowired
-    public AttackController(AttacksService attacksService) {
+    public AttackController(AttacksService attacksService, InformationService informationService) {
         this.attacksService = attacksService;
+        this.informationService = informationService;
+    }
+
+    @GetMapping("/villages")
+    public Map<String, String> getAllVillages(){
+        return informationService.getAllVillages();
     }
 
     @PostMapping("/attacks")
@@ -28,15 +36,4 @@ public class AttackController {
         return attacksService.getAvailableTroops();
     }
 
-    /*@GetMapping
-    public AttackResponse getDate(){
-        AttackResponse attackResponse = new AttackResponse(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        return attackResponse;
-    }*/
-
-    /*@GetMapping("/{attackId}")
-    public String confirmAttack(@PathVariable("attackId") String attackId){
-        attacksService.confirmAttack(attackId);
-        return "Attack has been sent.";
-    }*/
 }
