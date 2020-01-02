@@ -13,6 +13,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
 server:
   port: 2020

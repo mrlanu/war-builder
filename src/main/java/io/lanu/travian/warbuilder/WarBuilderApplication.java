@@ -40,5 +40,4 @@ public class WarBuilderApplication {
                 "ThreadPoolTaskScheduler");
         return threadPoolTaskScheduler;
     }
-
 }
