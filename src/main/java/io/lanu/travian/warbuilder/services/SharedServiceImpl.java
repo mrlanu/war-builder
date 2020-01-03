@@ -57,16 +57,18 @@ public class SharedServiceImpl implements SharedService {
 
             //Village Page
             pSPage = button.click();
+
+            //get Hero name
             HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) pSPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']").get(1);
             heroName = htmlAnchorHeroName.asText();
-            URL url = new URL(String.format("%s/build.php?tt=2&id=39",server));
 
             //get cookie
+            URL url = new URL(String.format("%s/build.php?tt=2&id=39",server));
             Set<Cookie> cookieSet = webClient.getCookies(url);
             StringBuilder cB = new StringBuilder();
             cookieSet.stream().filter(c -> c.toString().startsWith("J")).forEach(cB::append);
             cookie = cB.toString();
-            pSPage = webClient.getPage(String.format("%s/build.php?tt=2&id=39",server));
+
         } catch (IOException e) {
             e.printStackTrace();
         }

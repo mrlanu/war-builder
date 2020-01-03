@@ -138,7 +138,8 @@ public class AttacksServiceImpl implements AttacksService{
     private String createRequestForAttack(AttackRequest attackRequest) throws IOException {
         List<HtmlTextInput> inputTroopsList = new ArrayList<>();
         //setup initial values for attack
-        HtmlForm attackForm = sharedService.getpSPage().getFormByName("snd");
+        HtmlPage currentPage = sharedService.getPage(String.format("build.php?tt=2&id=39"));
+        HtmlForm attackForm = currentPage.getFormByName("snd");
         HtmlTextInput textFieldX = attackForm.getInputByName("x");
         HtmlTextInput textFieldY = attackForm.getInputByName("y");
         textFieldX.reset();
