@@ -51,33 +51,6 @@ public class AttacksServiceImpl implements AttacksService{
     }
 
     @Override
-    public Integer[] getAvailableTroops(){
-
-        HtmlPage currentPage;
-
-        if (sharedService.isLoggedOut()){sharedService.login();}
-
-        Integer[] result = new Integer[11];
-
-        currentPage = sharedService.getPage("build.php?tt=1&id=39");
-        List<HtmlElement> nodes = currentPage.getByXPath("//table[@class='troop_details']");
-        HtmlTable table = (HtmlTable) nodes.get(0);
-        HtmlTableBody body = table.getBodies().get(1);
-        HtmlTableRow row = body.getRows().get(0);
-
-        int i = 0;
-        for (final HtmlTableCell cell : row.getCells()) {
-            if (cell.getAttribute("class").contains("unit")){
-                result[i] = Integer.parseInt(cell.asText());
-                i++;
-            }
-        }
-        sharedService.logout();
-
-        return result;
-    }
-
-    @Override
     public void scheduleAttack(List<AttackRequest> attackRequest){
 
         if (sharedService.isLoggedOut()){sharedService.login();}

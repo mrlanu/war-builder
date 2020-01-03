@@ -3,8 +3,10 @@ package io.lanu.travian.warbuilder.controllers;
 import io.lanu.travian.warbuilder.models.AttackRequest;
 import io.lanu.travian.warbuilder.services.AttacksService;
 import io.lanu.travian.warbuilder.services.InformationService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -33,7 +35,7 @@ public class AttackController {
 
     @GetMapping("/troops")
     public Integer[] getAvailableTroops(){
-        return attacksService.getAvailableTroops();
+        return informationService.getAvailableTroops();
     }
 
 }
