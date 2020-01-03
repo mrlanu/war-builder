@@ -24,9 +24,10 @@ public class AttackController {
         return informationService.getAllVillages();
     }
 
-    @PostMapping("/attacks")
-    public String scheduleAttack(@RequestBody List<AttackRequest> attackRequest){
-        attacksService.scheduleAttack(attackRequest);
+    @PostMapping("/attacks/{villageName}")
+    public String scheduleAttack(@PathVariable String villageName,
+                                 @RequestBody List<AttackRequest> attackRequest){
+        attacksService.scheduleAttack(villageName, attackRequest);
         return "Attack has been created.";
     }
 

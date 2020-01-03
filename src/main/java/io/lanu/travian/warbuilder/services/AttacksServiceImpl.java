@@ -55,18 +55,16 @@ public class AttacksServiceImpl implements AttacksService{
     }
 
     @Override
-    public void scheduleAttack(List<AttackRequest> attackRequest){
+    public void scheduleAttack(String attackingVillageName, List<AttackRequest> attackRequest){
 
         if (sharedService.isLoggedOut()){sharedService.login();}
 
-        /*Map<String, String> villages = informationService.getAllVillages();
-        String wholeId = villages.get(attackRequest.get(0).getAttackingVillage());
-        sharedService.getPage("build.php?tt=2&id=39" + wholeId.split("&")[0]);*/
+        changeActiveVillage(attackingVillageName);
 
         Date sendingTime = getPerfectTime(attackRequest);
 
         if (sendingTime.after(new Date())){
-            createTask(sendingTime, attackRequest);
+            createTask(attackingVillageName, sendingTime, attackRequest);
             System.out.println("Attack has been scheduled at - " + sendingTime);
         }else {
             System.out.println("Attack can't be scheduled. Not enough time.");
@@ -237,10 +235,12 @@ public class AttacksServiceImpl implements AttacksService{
         return null;
     }
 
-    private void createTask(Date sendingTime, List<AttackRequest> attackRequest){
+    private void createTask(String attackingVillageName, Date sendingTime, List<AttackRequest> attackRequest){
         threadPoolTaskScheduler.schedule(() -> {
 
             if (sharedService.isLoggedOut()){sharedService.login();}
+
+            changeActiveVillage(attackingVillageName);
 
             createAttack(attackRequest);
             String attackId = attackRequest.get(0).getAttackId();
@@ -260,5 +260,11 @@ public class AttacksServiceImpl implements AttacksService{
             System.out.println("<<<<-----All done----->>>>");
 
         }, sendingTime);
+    }
+
+    private void changeActiveVillage(String attackingVillageName){
+        String id = informationService.getAllVillages().get(attackingVillageName);
+        sharedService.getPage("dorf2.php" + id);
+        sharedService.getPage("build.php?tt=2&id=39");
     }
 }
