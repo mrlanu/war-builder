@@ -23,7 +23,8 @@ public class InformationServiceImpl implements InformationService {
 
         if (sharedService.isLoggedOut()){sharedService.login();}
 
-        List<HtmlAnchor> anchors = sharedService.getpSPage()
+        HtmlPage currentPage = sharedService.getPage("dorf2.php");
+        List<HtmlAnchor> anchors = currentPage
                 .getByXPath("//div[@id='sidebarBoxVillagelist']//div[@class='innerBox content']//a");
 
         anchors.forEach(htmlAnchor -> {
@@ -37,15 +38,17 @@ public class InformationServiceImpl implements InformationService {
     }
 
     @Override
-    public Integer[] getAvailableTroops(){
+    public Integer[] getAvailableTroops(String villageName){
 
         HtmlPage currentPage;
+        Integer[] result = new Integer[11];
 
         if (sharedService.isLoggedOut()){sharedService.login();}
 
-        Integer[] result = new Integer[11];
-
+        String id = getAllVillages().get(villageName);
+        sharedService.getPage("dorf2.php" + id);
         currentPage = sharedService.getPage("build.php?tt=1&id=39");
+
         List<HtmlElement> nodes = currentPage.getByXPath("//table[@class='troop_details']");
         HtmlTable table = (HtmlTable) nodes.get(0);
         HtmlTableBody body = table.getBodies().get(1);

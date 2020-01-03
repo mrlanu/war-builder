@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class AttackRequest {
     private String attackId;
+    private String attackingVillage;
     private Integer x;
     private Integer y;
     private Integer kindAttack;

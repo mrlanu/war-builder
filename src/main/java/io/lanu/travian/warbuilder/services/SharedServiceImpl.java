@@ -63,8 +63,7 @@ public class SharedServiceImpl implements SharedService {
             heroName = htmlAnchorHeroName.asText();
 
             //get cookie
-            URL url = new URL(String.format("%s/build.php?tt=2&id=39",server));
-            Set<Cookie> cookieSet = webClient.getCookies(url);
+            Set<Cookie> cookieSet = webClient.getCookies(pSPage.getUrl());
             StringBuilder cB = new StringBuilder();
             cookieSet.stream().filter(c -> c.toString().startsWith("J")).forEach(cB::append);
             cookie = cB.toString();

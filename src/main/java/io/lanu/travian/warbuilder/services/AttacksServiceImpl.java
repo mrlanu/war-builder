@@ -26,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -40,20 +41,27 @@ public class AttacksServiceImpl implements AttacksService{
     private HttpClient httpClient;
     private ThreadPoolTaskScheduler threadPoolTaskScheduler;
     private SharedService sharedService;
+    private InformationService informationService;
 
     @Autowired
     public AttacksServiceImpl(WaveRepository waveRepository, HttpClient httpClient,
-                              ThreadPoolTaskScheduler threadPoolTaskScheduler, SharedService sharedService) {
+                              ThreadPoolTaskScheduler threadPoolTaskScheduler, SharedService sharedService,
+                              InformationService informationService) {
         this.waveRepository = waveRepository;
         this.httpClient = httpClient;
         this.threadPoolTaskScheduler = threadPoolTaskScheduler;
         this.sharedService = sharedService;
+        this.informationService = informationService;
     }
 
     @Override
     public void scheduleAttack(List<AttackRequest> attackRequest){
 
         if (sharedService.isLoggedOut()){sharedService.login();}
+
+        /*Map<String, String> villages = informationService.getAllVillages();
+        String wholeId = villages.get(attackRequest.get(0).getAttackingVillage());
+        sharedService.getPage("build.php?tt=2&id=39" + wholeId.split("&")[0]);*/
 
         Date sendingTime = getPerfectTime(attackRequest);
 
@@ -111,7 +119,7 @@ public class AttacksServiceImpl implements AttacksService{
     private String createRequestForAttack(AttackRequest attackRequest) throws IOException {
         List<HtmlTextInput> inputTroopsList = new ArrayList<>();
         //setup initial values for attack
-        HtmlPage currentPage = sharedService.getPage(String.format("build.php?tt=2&id=39"));
+        HtmlPage currentPage = sharedService.getpSPage();
         HtmlForm attackForm = currentPage.getFormByName("snd");
         HtmlTextInput textFieldX = attackForm.getInputByName("x");
         HtmlTextInput textFieldY = attackForm.getInputByName("y");
