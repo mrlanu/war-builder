@@ -1,0 +1,25 @@
+travian:
+  server: https://ts2.travian.ru
+  user:
+    name: Баба Яга
+    password: k28335555
+
+spring:
+  datasource:
+    url: jdbc:h2:file:~/test2;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
+    username: mrlanu
+    password: 12345
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  rabbitmq:
+    host: shrimp.rmq.cloudamqp.com
+    virtual-host: grqroqhj
+    username: grqroqhj
+    password: PIjQzsPYlidbC_-O5V1DfBLbFAIzNyi4
+    port: 8883
+    addresses: amqp://grqroqhj:PIjQzsPYlidbC_-O5V1DfBLbFAIzNyi4@shrimp.rmq.cloudamqp.com/grqroqhj
+
+server:
+  port: 2020

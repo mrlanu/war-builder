@@ -1,0 +1,23 @@
+travian:
+  server: https://ts2.travian.ru
+  user:
+    name: Баба Яга
+    password: k28335555
+
+spring:
+  datasource:
+    url: jdbc:h2:file:~/test2;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
+    username: mrlanu
+    password: 12345
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+server:
+  port: 2020
