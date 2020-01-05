@@ -76,7 +76,8 @@ public class AttacksServiceImpl implements AttacksService{
         LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
         System.out.println("Server time - " + serverTime);
 
-        LocalDateTime attackRequestTime = attackRequest.get(0).getTime();
+        LocalDateTime attackRequestTime = new java.sql.Timestamp(
+                attackRequest.get(0).getTime().getTime()).toLocalDateTime().plusHours(6);
         System.out.println("Requested attack time - " + attackRequestTime);
 
         long timeForAttack = 0;
@@ -246,7 +247,8 @@ public class AttacksServiceImpl implements AttacksService{
             String attackId = attackRequest.get(0).getAttackId();
             long timeForAttack = waveRepository.findAllByAttackId(attackId).get(0).getTimeForAttack();
             LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
-            LocalDateTime attackRequestTime = attackRequest.get(0).getTime();
+            LocalDateTime attackRequestTime = new java.sql.Timestamp(
+                    attackRequest.get(0).getTime().getTime()).toLocalDateTime().plusHours(6);
             long availableTime = Duration.between(serverTime, attackRequestTime).toMillis() - timeForAttack;
 
             try {

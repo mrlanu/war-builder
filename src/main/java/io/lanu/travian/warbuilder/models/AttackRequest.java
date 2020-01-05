@@ -1,22 +1,22 @@
 package io.lanu.travian.warbuilder.models;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.time.LocalDateTime;
+import java.io.Serializable;
+import java.util.Date;
 
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AttackRequest {
+@Getter
+@Setter
+@ToString
+public class AttackRequest implements Serializable {
     private String attackId;
-    private String attackingVillage;
     private Integer x;
     private Integer y;
     private Integer kindAttack;
     private Integer[] troops;
     private Integer firstTarget;
     private Integer secondTarget;
-    private LocalDateTime time; // format HH:MM:SS
+    private Date time; // format HH:MM:SS
 }

@@ -1,6 +1,8 @@
 package io.lanu.travian.warbuilder.amqp;
 
-import io.lanu.travian.warbuilder.models.Order;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.lanu.travian.warbuilder.models.AttackRequest;
+import io.lanu.travian.warbuilder.models.CommandMessage;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -17,13 +19,8 @@ import java.util.Map;
 public class RabbitMqConfig {
 
     @Bean
-    public WarReceiver receiver() {
-        return new WarReceiver();
-    }
-
-    @Bean
-    public FanoutExchange fanout() {
-        return new FanoutExchange("my.fanout");
+    public DirectExchange directExchange() {
+        return new DirectExchange("my.direct");
     }
 
     @Bean
@@ -32,9 +29,9 @@ public class RabbitMqConfig {
     }
 
     @Bean
-    public Binding binding1(FanoutExchange fanout,
+    public Binding binding1(DirectExchange directExchange,
                             Queue autoDeleteQueue1) {
-        return BindingBuilder.bind(autoDeleteQueue1).to(fanout);
+        return BindingBuilder.bind(autoDeleteQueue1).to(directExchange).with("attack");
     }
 
     @Bean
@@ -58,7 +55,7 @@ public class RabbitMqConfig {
     {
         DefaultClassMapper classMapper = new DefaultClassMapper();
         Map<String, Class<?>> idClassMapping = new HashMap<>();
-        idClassMapping.put("io.lanu.travian.warbuildercommander.models.Order", Order.class);
+        idClassMapping.put("io.lanu.travian.warbuildercommander.models.CommandMessage", CommandMessage.class);
         classMapper.setIdClassMapping(idClassMapping);
         return classMapper;
     }

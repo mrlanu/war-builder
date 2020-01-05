@@ -1,14 +1,24 @@
 package io.lanu.travian.warbuilder.amqp;
 
-import io.lanu.travian.warbuilder.models.Order;
+import io.lanu.travian.warbuilder.models.CommandMessage;
+import io.lanu.travian.warbuilder.services.AttacksService;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
 
+@Component
 @RabbitListener(queues = "#{autoDeleteQueue1.name}")
 public class WarReceiver {
 
+    private AttacksService attacksService;
+
+    public WarReceiver(AttacksService attacksService) {
+        this.attacksService = attacksService;
+    }
+
     @RabbitHandler
-    public void receive(Order order) {
-        System.out.println(" [x] Received '" + order.toString());
+    public void receive(CommandMessage commandMessage) {
+        System.out.println(" [x] Received command'");
+        attacksService.scheduleAttack(commandMessage.getVillageName(), commandMessage.getAttackRequests());
     }
 }
