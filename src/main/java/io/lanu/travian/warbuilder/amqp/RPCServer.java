@@ -1,5 +1,7 @@
 package io.lanu.travian.warbuilder.amqp;
 
+import io.lanu.travian.warbuilder.models.AboutVillageModel;
+import io.lanu.travian.warbuilder.models.CommandMessage;
 import io.lanu.travian.warbuilder.models.VillageModel;
 import io.lanu.travian.warbuilder.services.InformationService;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -17,10 +19,11 @@ public class RPCServer {
     }
 
     @RabbitListener(queues = "rpc.requests")
-    public List<VillageModel> allVillages() {
-        System.out.println(" [x] Received request for all villages...");
-        List<VillageModel> result = informationService.getAllVillages();
-        System.out.println(" [x] All villages Returned.");
-        return result;
+    public AboutVillageModel allVillages(CommandMessage commandMessage) {
+        System.out.println(" [x] Received request for update...");
+        List<VillageModel> allVillages = informationService.getAllVillages();
+        Integer[] availableTroops = informationService.getAvailableTroops(commandMessage.getVillageName());
+        System.out.println(" [x] Update Returned.");
+        return new AboutVillageModel(commandMessage.getVillageName(), availableTroops, allVillages);
     }
 }
