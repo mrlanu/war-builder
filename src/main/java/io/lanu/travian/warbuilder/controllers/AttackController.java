@@ -1,12 +1,12 @@
 package io.lanu.travian.warbuilder.controllers;
 
 import io.lanu.travian.warbuilder.models.AttackRequest;
+import io.lanu.travian.warbuilder.models.VillageModel;
 import io.lanu.travian.warbuilder.services.AttacksService;
 import io.lanu.travian.warbuilder.services.InformationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 public class AttackController {
@@ -20,7 +20,7 @@ public class AttackController {
     }
 
     @GetMapping("/villages")
-    public Map<String, String> getAllVillages(){
+    public List<VillageModel> getAllVillages(){
         return informationService.getAllVillages();
     }
 

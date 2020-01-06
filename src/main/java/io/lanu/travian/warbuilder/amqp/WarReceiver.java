@@ -7,7 +7,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 @Component
-@RabbitListener(queues = "#{autoDeleteQueue1.name}")
+@RabbitListener(queues = "#{autoDeleteQueue.name}")
 public class WarReceiver {
 
     private AttacksService attacksService;

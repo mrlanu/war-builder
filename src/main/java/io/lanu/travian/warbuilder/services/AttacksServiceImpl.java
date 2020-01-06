@@ -265,7 +265,9 @@ public class AttacksServiceImpl implements AttacksService{
     }
 
     private void changeActiveVillage(String attackingVillageName){
-        String id = informationService.getAllVillages().get(attackingVillageName);
+        String id = informationService.getAllVillages().stream()
+                .filter(villageModel -> villageModel.getName().equals(attackingVillageName))
+                .findFirst().get().getId();
         sharedService.getPage("dorf2.php" + id);
         sharedService.getPage("build.php?tt=2&id=39");
     }

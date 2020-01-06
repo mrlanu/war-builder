@@ -7,8 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Item {
-
+public class VillageModel {
     private String name;
-    private Integer quantity;
+    private String id;
 }

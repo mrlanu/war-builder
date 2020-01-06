@@ -1,8 +1,10 @@
 package io.lanu.travian.warbuilder.services;
 
-import java.util.Map;
+import io.lanu.travian.warbuilder.models.VillageModel;
+
+import java.util.List;
 
 public interface InformationService {
-    Map<String, String> getAllVillages();
+    List<VillageModel> getAllVillages();
     Integer[] getAvailableTroops(String villageName);
 }

@@ -1,11 +1,11 @@
 package io.lanu.travian.warbuilder.services;
 
 import com.gargoylesoftware.htmlunit.html.*;
+import io.lanu.travian.warbuilder.models.VillageModel;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class InformationServiceImpl implements InformationService {
@@ -17,9 +17,7 @@ public class InformationServiceImpl implements InformationService {
     }
 
     @Override
-    public Map<String, String> getAllVillages(){
-
-        Map<String, String> villages = new HashMap<>();
+    public List<VillageModel> getAllVillages(){
 
         if (sharedService.isLoggedOut()){sharedService.login();}
 
@@ -27,14 +25,11 @@ public class InformationServiceImpl implements InformationService {
         List<HtmlAnchor> anchors = currentPage
                 .getByXPath("//div[@id='sidebarBoxVillagelist']//div[@class='innerBox content']//a");
 
-        anchors.forEach(htmlAnchor -> {
-            HtmlDivision d = (HtmlDivision) htmlAnchor.getElementsByAttribute("div", "class", "name").get(0);
-            villages.put(d.getTextContent(), htmlAnchor.getHrefAttribute());
-        });
-
-        //sharedService.logout();
-
-        return villages;
+        return anchors.stream()
+                .map(htmlAnchor -> {
+                    HtmlDivision d = (HtmlDivision) htmlAnchor.getElementsByAttribute("div", "class", "name").get(0);
+                    return new VillageModel(d.getTextContent(), htmlAnchor.getHrefAttribute());
+                }).collect(Collectors.toList());
     }
 
     @Override
@@ -45,7 +40,9 @@ public class InformationServiceImpl implements InformationService {
 
         if (sharedService.isLoggedOut()){sharedService.login();}
 
-        String id = getAllVillages().get(villageName);
+        String id = getAllVillages().stream()
+                .filter(villageModel -> villageModel.getName().equals(villageName))
+                .findFirst().get().getId();
         sharedService.getPage("dorf2.php" + id);
         currentPage = sharedService.getPage("build.php?tt=1&id=39");
 

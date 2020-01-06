@@ -1,7 +1,5 @@
 package io.lanu.travian.warbuilder.amqp;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.lanu.travian.warbuilder.models.AttackRequest;
 import io.lanu.travian.warbuilder.models.CommandMessage;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -9,6 +7,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.DefaultClassMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,23 +17,44 @@ import java.util.Map;
 @Configuration
 public class RabbitMqConfig {
 
-    @Bean
+    // config for RPC
+    @Bean(name = "my.rpc.direct")
+    public DirectExchange directExchangeRPC() {
+        return new DirectExchange("my.rpc.direct");
+    }
+
+    @Bean(name = "my.rpc.queue")
+    public Queue queue() {
+        return new Queue("rpc.requests");
+    }
+
+    @Bean(name = "my.rpc.binding")
+    public Binding bindingRPC(@Qualifier("my.rpc.direct") DirectExchange exchange,
+                              @Qualifier("my.rpc.queue") Queue queue) {
+        return BindingBuilder.bind(queue)
+                .to(exchange)
+                .with("rpc");
+    }
+
+
+    // config for direct
+    @Bean(name = "direct")
     public DirectExchange directExchange() {
         return new DirectExchange("my.direct");
     }
 
-    @Bean
-    public Queue autoDeleteQueue1() {
+    @Bean(name = "autoDeleteQueue")
+    public Queue autoDeleteQueue() {
         return new AnonymousQueue();
     }
 
-    @Bean
-    public Binding binding1(DirectExchange directExchange,
-                            Queue autoDeleteQueue1) {
-        return BindingBuilder.bind(autoDeleteQueue1).to(directExchange).with("attack");
+    @Bean(name = "binding")
+    public Binding binding(@Qualifier("direct")DirectExchange directExchange,
+                           @Qualifier("autoDeleteQueue")Queue autoDeleteQueue) {
+        return BindingBuilder.bind(autoDeleteQueue).to(directExchange).with("attack");
     }
 
-    @Bean
+    @Bean(name = "rabbitTemplate")
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory)
     {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
