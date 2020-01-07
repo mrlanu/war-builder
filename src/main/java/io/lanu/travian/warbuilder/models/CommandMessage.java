@@ -1,9 +1,11 @@
 package io.lanu.travian.warbuilder.models;
 
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.io.Serializable;
-import java.util.List;
 
 @NoArgsConstructor
 @Getter
@@ -12,17 +14,16 @@ import java.util.List;
 public class CommandMessage implements Serializable {
     private CommandsEnum command;
     private String villageName;
-    private List<AttackRequest> attackRequests;
+    private AttackRequest attackRequest;
 
     public CommandMessage(CommandsEnum command, String villageName) {
         this.command = command;
         this.villageName = villageName;
-        this.attackRequests = null;
+        this.attackRequest = null;
     }
 
-    public CommandMessage(CommandsEnum command, String villageName, List<AttackRequest> attackRequests) {
+    public CommandMessage(CommandsEnum command, AttackRequest attackRequest) {
         this.command = command;
-        this.villageName = villageName;
-        this.attackRequests = attackRequests;
+        this.attackRequest = attackRequest;
     }
 }

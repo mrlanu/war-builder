@@ -18,7 +18,7 @@ public class WarReceiver {
 
     @RabbitHandler
     public void receive(CommandMessage commandMessage) {
-        System.out.println(" [x] Received command'");
-        attacksService.scheduleAttack(commandMessage.getVillageName(), commandMessage.getAttackRequests());
+        System.out.println(" [x] Received command for attack.");
+        attacksService.scheduleAttack(commandMessage.getAttackRequest());
     }
 }

@@ -3,6 +3,7 @@ package io.lanu.travian.warbuilder.services;
 import com.gargoylesoftware.htmlunit.html.*;
 import io.lanu.travian.warbuilder.entities.WaveEntity;
 import io.lanu.travian.warbuilder.models.AttackRequest;
+import io.lanu.travian.warbuilder.models.WaveModel;
 import io.lanu.travian.warbuilder.repositories.WaveRepository;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.jsoup.Jsoup;
@@ -55,16 +56,16 @@ public class AttacksServiceImpl implements AttacksService{
     }
 
     @Override
-    public void scheduleAttack(String attackingVillageName, List<AttackRequest> attackRequest){
+    public void scheduleAttack(AttackRequest attackRequest){
 
         if (sharedService.isLoggedOut()){sharedService.login();}
 
-        changeActiveVillage(attackingVillageName);
+        changeActiveVillage(attackRequest.getVillageName());
 
         Date sendingTime = getPerfectTime(attackRequest);
 
         if (sendingTime.after(new Date())){
-            createTask(attackingVillageName, sendingTime, attackRequest);
+            createTask(attackRequest.getVillageName(), sendingTime, attackRequest);
             System.out.println("Attack has been scheduled at - " + sendingTime);
         }else {
             System.out.println("Attack can't be scheduled. Not enough time.");
@@ -72,17 +73,17 @@ public class AttacksServiceImpl implements AttacksService{
         sharedService.logout();
     }
 
-    private Date getPerfectTime(List<AttackRequest> attackRequest){
+    private Date getPerfectTime(AttackRequest attackRequest){
         LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
         System.out.println("Server time - " + serverTime);
 
         LocalDateTime attackRequestTime = new java.sql.Timestamp(
-                attackRequest.get(0).getTime().getTime()).toLocalDateTime().plusHours(6);
+                attackRequest.getTime().getTime()).toLocalDateTime().plusHours(6);
         System.out.println("Requested attack time - " + attackRequestTime);
 
         long timeForAttack = 0;
         try {
-            timeForAttack = addWave(attackRequest.get(0), true);
+            timeForAttack = addWave(attackRequest, 0, true);
             System.out.println("Time needed for Attack - " +
                     DurationFormatUtils.formatDuration(timeForAttack, "HH:mm:ss"));
         } catch (IOException e) {
@@ -101,21 +102,22 @@ public class AttacksServiceImpl implements AttacksService{
         return Date.from(perfectTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
-    private long addWave(AttackRequest attackRequest, boolean isEstimating) throws IOException {
+    private long addWave(AttackRequest attackRequest, int waveNumber, boolean isEstimating) throws IOException {
         long result;
-        String requestForAttack = createRequestForAttack(attackRequest);
-        String responseForAttack = sendAsyncRequest(requestForAttack, true);
 
-        result = getTimeForAttack(responseForAttack);
+        String requestForAttack = createRequestForAttack(attackRequest, waveNumber);
+        String presetAttack = sendAsyncRequest(requestForAttack, true);
+
+        result = getTimeForAttack(presetAttack);
 
         if (!isEstimating){
-            addAttackRequestToQueue(attackRequest, responseForAttack, result);
+            addAttackRequestToQueue(attackRequest, waveNumber, presetAttack, result);
         }
 
         return result;
     }
 
-    private String createRequestForAttack(AttackRequest attackRequest) throws IOException {
+    private String createRequestForAttack(AttackRequest attackRequest, int waveNumber) throws IOException {
         List<HtmlTextInput> inputTroopsList = new ArrayList<>();
         //setup initial values for attack
         HtmlPage currentPage = sharedService.getpSPage();
@@ -133,7 +135,8 @@ public class AttacksServiceImpl implements AttacksService{
                 HtmlTextInput inp = (HtmlTextInput) inpList.get(0);
                 inputTroopsList.add(inp);
                 inputTroopsList.get(inputTroopsList.size() - 1).reset();
-                inputTroopsList.get(inputTroopsList.size() - 1).type(attackRequest.getTroops()[i - 1].toString());
+                inputTroopsList.get(inputTroopsList.size() - 1)
+                        .type(attackRequest.getWaves().get(waveNumber).getTroops()[i - 1].toString());
             }
         }
 
@@ -165,15 +168,15 @@ public class AttacksServiceImpl implements AttacksService{
         return timeToAttack.getLong(ChronoField.MILLI_OF_DAY);
     }
 
-    private void createAttack(List<AttackRequest> attackRequest) {
-            attackRequest.forEach(a -> {
-                try {
-                    addWave(a, false);
-                    TimeUnit.MILLISECONDS.sleep(50);
-                } catch (IOException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            });
+    private void createAttack(AttackRequest attackRequest) {
+        for (int i=0; i < attackRequest.getWaves().size(); i++){
+            try {
+                addWave(attackRequest, i, false);
+                TimeUnit.MILLISECONDS.sleep(50);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void confirmAttack(String attackId) {
@@ -189,8 +192,8 @@ public class AttacksServiceImpl implements AttacksService{
         waveRepository.deleteAllByAttackId(attackId);
     }
 
-    private void addAttackRequestToQueue(AttackRequest attackRequest, String attackResponse, long timeForAttack){
-        Document doc = Jsoup.parse(attackResponse);
+    private void addAttackRequestToQueue(AttackRequest attackRequest, int waveNumber, String presetAttack, long timeForAttack){
+        Document doc = Jsoup.parse(presetAttack);
         List<Element> link = doc.select("input");
         Element button = doc.select("#btn_ok").first();
 
@@ -199,11 +202,12 @@ public class AttacksServiceImpl implements AttacksService{
                 .map(l -> l.attr("name") + "=" + l.attr("value"))
                 .collect(Collectors.joining("&", "", "&" + button.attr("name") + "=" + button.attr("value")));
 
-        if (attackRequest.getTroops()[7] >= 20){
-            parsedResult += "&troops[0][kata]=" + attackRequest.getFirstTarget();
-            parsedResult += "&troops[0][kata2]=" + attackRequest.getSecondTarget();
-        }else if (attackRequest.getTroops()[7] >= 1){
-            parsedResult += "&troops[0][kata]=" + attackRequest.getFirstTarget();
+        WaveModel waveConfig = attackRequest.getWaves().get(waveNumber);
+        if (waveConfig.getTroops()[7] >= 20){
+            parsedResult += "&troops[0][kata]=" + waveConfig.getFirstTarget();
+            parsedResult += "&troops[0][kata2]=" + waveConfig.getSecondTarget();
+        }else if (waveConfig.getTroops()[7] >= 1){
+            parsedResult += "&troops[0][kata]=" + waveConfig.getFirstTarget();
         }
 
         WaveEntity waveEntity = new WaveEntity(attackRequest.getAttackId(), timeForAttack, parsedResult);
@@ -236,7 +240,7 @@ public class AttacksServiceImpl implements AttacksService{
         return null;
     }
 
-    private void createTask(String attackingVillageName, Date sendingTime, List<AttackRequest> attackRequest){
+    private void createTask(String attackingVillageName, Date sendingTime, AttackRequest attackRequest){
         threadPoolTaskScheduler.schedule(() -> {
 
             if (sharedService.isLoggedOut()){sharedService.login();}
@@ -244,11 +248,11 @@ public class AttacksServiceImpl implements AttacksService{
             changeActiveVillage(attackingVillageName);
 
             createAttack(attackRequest);
-            String attackId = attackRequest.get(0).getAttackId();
+            String attackId = attackRequest.getAttackId();
             long timeForAttack = waveRepository.findAllByAttackId(attackId).get(0).getTimeForAttack();
             LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
             LocalDateTime attackRequestTime = new java.sql.Timestamp(
-                    attackRequest.get(0).getTime().getTime()).toLocalDateTime().plusHours(6);
+                    attackRequest.getTime().getTime()).toLocalDateTime().plusHours(6);
             long availableTime = Duration.between(serverTime, attackRequestTime).toMillis() - timeForAttack;
 
             try {

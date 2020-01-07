@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,11 +13,10 @@ import java.util.Date;
 @ToString
 public class AttackRequest implements Serializable {
     private String attackId;
+    private String villageName;
     private Integer x;
     private Integer y;
     private Integer kindAttack;
-    private Integer[] troops;
-    private Integer firstTarget;
-    private Integer secondTarget;
+    private List<WaveModel> waves;
     private Date time; // format HH:MM:SS
 }
