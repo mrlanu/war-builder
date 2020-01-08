@@ -40,24 +40,26 @@ public class InformationServiceImpl implements InformationService {
 
         if (sharedService.isLoggedOut()){sharedService.login();}
 
-        String id = getAllVillages().stream()
+        getAllVillages().stream()
                 .filter(villageModel -> villageModel.getName().equals(villageName))
-                .findFirst().get().getId();
-        sharedService.getPage("dorf2.php" + id);
-        currentPage = sharedService.getPage("build.php?tt=1&id=39");
+                .findFirst().ifPresent(villageModel -> {
+                    sharedService.getPage("dorf2.php" + villageModel.getId());
+                    List<HtmlElement> nodes = sharedService.getPage("build.php?tt=1&id=39")
+                            .getByXPath("//table[@class='troop_details']");
 
-        List<HtmlElement> nodes = currentPage.getByXPath("//table[@class='troop_details']");
-        HtmlTable table = (HtmlTable) nodes.get(0);
-        HtmlTableBody body = table.getBodies().get(1);
-        HtmlTableRow row = body.getRows().get(0);
+                    HtmlTable table = (HtmlTable) nodes.get(0);
+                    HtmlTableBody body = table.getBodies().get(1);
+                    HtmlTableRow row = body.getRows().get(0);
 
-        int i = 0;
-        for (final HtmlTableCell cell : row.getCells()) {
-            if (cell.getAttribute("class").contains("unit")){
-                result[i] = Integer.parseInt(cell.asText());
-                i++;
-            }
-        }
+                    int i = 0;
+                    for (final HtmlTableCell cell : row.getCells()) {
+                        if (cell.getAttribute("class").contains("unit")){
+                            result[i] = Integer.parseInt(cell.asText());
+                            i++;
+                        }
+                    }
+                });
+
         //sharedService.logout();
 
         return result;

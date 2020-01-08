@@ -64,6 +64,10 @@ public class AttacksServiceImpl implements AttacksService{
 
         Date sendingTime = getPerfectTime(attackRequest);
 
+        if (sendingTime == null){
+            return;
+        }
+
         if (sendingTime.after(new Date())){
             createTask(attackRequest.getVillageName(), sendingTime, attackRequest);
             System.out.println("Attack has been scheduled at - " + sendingTime);
@@ -81,6 +85,10 @@ public class AttacksServiceImpl implements AttacksService{
                 attackRequest.getTime().getTime()).toLocalDateTime().plusHours(6);
         System.out.println("Requested attack time - " + attackRequestTime);
 
+        if (serverTime.isAfter(attackRequestTime)){
+            System.out.println("[x] Attack hasn't been scheduled. Wrong time requested.");
+            return null;
+        }
         long timeForAttack = 0;
         try {
             timeForAttack = addWave(attackRequest, 0, true);
