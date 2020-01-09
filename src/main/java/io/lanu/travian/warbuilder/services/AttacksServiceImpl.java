@@ -260,7 +260,8 @@ public class AttacksServiceImpl implements AttacksService{
             LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
             LocalDateTime attackRequestTime = new java.sql.Timestamp(
                     attackRequest.getTime().getTime()).toLocalDateTime().plusHours(6);
-            long availableTime = Duration.between(serverTime, attackRequestTime).toMillis() - timeForAttack;
+            long availableTime = Duration.between(serverTime, attackRequestTime).toMillis()
+                    - timeForAttack - attackRequest.getTimeCorrection();
 
             try {
                 TimeUnit.MILLISECONDS.sleep(availableTime);
