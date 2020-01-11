@@ -13,6 +13,7 @@ import java.util.List;
 @ToString
 public class AttackRequest implements Serializable {
     private String attackId;
+    private boolean immediately;
     private String villageName;
     private Integer x;
     private Integer y;

@@ -58,8 +58,13 @@ public class AttacksServiceImpl implements AttacksService{
     public void scheduleAttack(AttackRequest attackRequest){
 
         if (sharedService.isLoggedOut()){sharedService.login();}
-
         changeActiveVillage(attackRequest.getVillageName());
+
+        if (attackRequest.isImmediately()){
+            createAttack(attackRequest);
+            confirmAttack(attackRequest.getAttackId());
+            return;
+        }
 
         Date sendingTime = getPerfectTime(attackRequest);
 
@@ -73,7 +78,7 @@ public class AttacksServiceImpl implements AttacksService{
         }else {
             System.out.println("Attack can't be scheduled. Not enough time.");
         }
-        sharedService.logout();
+        //sharedService.logout();
     }
 
     private Date getPerfectTime(AttackRequest attackRequest){
@@ -270,7 +275,7 @@ public class AttacksServiceImpl implements AttacksService{
             }
             confirmAttack(attackId);
 
-            sharedService.logout();
+            //sharedService.logout();
             System.out.println("<<<<-----All done----->>>>");
 
         }, sendingTime);
