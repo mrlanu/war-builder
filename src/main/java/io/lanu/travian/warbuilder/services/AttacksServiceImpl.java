@@ -5,6 +5,8 @@ import io.lanu.travian.warbuilder.entities.WaveEntity;
 import io.lanu.travian.warbuilder.models.AttackRequest;
 import io.lanu.travian.warbuilder.models.WaveModel;
 import io.lanu.travian.warbuilder.repositories.WaveRepository;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -287,5 +289,43 @@ public class AttacksServiceImpl implements AttacksService{
                 .findFirst().get().getId();
         sharedService.getPage("dorf2.php" + id);
         sharedService.getPage("build.php?tt=2&id=39");
+    }
+
+    public List<Coordinates> getVillagesForSpam(){
+        final List<Coordinates> result = new ArrayList<>();
+        if (sharedService.isLoggedOut()){sharedService.login();}
+
+        //find envelope link
+        List<HtmlAnchor> anchors = sharedService.getpSPage().getByXPath("//a[@href='messages.php']");
+        try {
+            //go to messages page
+            HtmlPage page = anchors.get(0).click();
+
+            //get last message with text 'spam or Spam'
+            List<HtmlAnchor> anchorList =
+                    page.getByXPath("//img[contains(@class, 'messageStatus')]//parent::a[1]" +
+                            "//following-sibling::a[contains(text(),'спам') or contains(text(),'Спам')]");
+            //go inside that message
+            page = anchorList.get(0).click();
+            //get all villages from message
+            anchorList = page.getByXPath("//a[@class='bbCoordsLink']");
+
+            anchorList.forEach(htmlAnchor -> {
+                String[] textArr = htmlAnchor.getTextContent().split(" ");
+                String coords = textArr[textArr.length - 1];
+                String[] coordArr = coords.split("[(,|,)]");
+                result.add(new Coordinates(Integer.parseInt(coordArr[1]), Integer.parseInt(coordArr[2])));
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class Coordinates{
+        private int x;
+        private int y;
     }
 }
