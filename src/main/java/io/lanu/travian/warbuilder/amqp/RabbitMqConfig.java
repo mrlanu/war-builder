@@ -38,9 +38,9 @@ public class RabbitMqConfig {
 
 
     // config for direct
-    @Bean(name = "direct")
-    public DirectExchange directExchange() {
-        return new DirectExchange("my.direct");
+    @Bean
+    public FanoutExchange fanoutExchange() {
+        return new FanoutExchange("my.fanout");
     }
 
     @Bean(name = "autoDeleteQueue")
@@ -49,9 +49,9 @@ public class RabbitMqConfig {
     }
 
     @Bean(name = "binding")
-    public Binding binding(@Qualifier("direct")DirectExchange directExchange,
+    public Binding binding(FanoutExchange fanoutExchange,
                            @Qualifier("autoDeleteQueue")Queue autoDeleteQueue) {
-        return BindingBuilder.bind(autoDeleteQueue).to(directExchange).with("attack");
+        return BindingBuilder.bind(autoDeleteQueue).to(fanoutExchange);
     }
 
     @Bean(name = "rabbitTemplate")
