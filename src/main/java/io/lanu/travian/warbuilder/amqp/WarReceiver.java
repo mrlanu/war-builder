@@ -1,6 +1,7 @@
 package io.lanu.travian.warbuilder.amqp;
 
 import io.lanu.travian.warbuilder.models.CommandMessage;
+import io.lanu.travian.warbuilder.models.CommandsEnum;
 import io.lanu.travian.warbuilder.services.AttacksService;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -19,6 +20,10 @@ public class WarReceiver {
     @RabbitHandler
     public void receive(CommandMessage commandMessage) {
         System.out.println(" [x] Received command for attack.");
-        attacksService.scheduleAttack(commandMessage.getAttackRequest());
+        if (commandMessage.getCommand().equals(CommandsEnum.ATTACK)){
+            attacksService.scheduleAttack(commandMessage.getAttackRequest());
+        }else if (commandMessage.getCommand().equals(CommandsEnum.SPAM)){
+            attacksService.sendSpam(commandMessage.getAttackRequest());
+        }
     }
 }

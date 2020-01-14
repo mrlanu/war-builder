@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 @Service
 public class AttacksServiceImpl implements AttacksService{
 
-
     private WaveRepository waveRepository;
     private HttpClient httpClient;
     private ThreadPoolTaskScheduler threadPoolTaskScheduler;
@@ -54,6 +53,21 @@ public class AttacksServiceImpl implements AttacksService{
         this.threadPoolTaskScheduler = threadPoolTaskScheduler;
         this.sharedService = sharedService;
         this.informationService = informationService;
+    }
+
+    @Override
+    public void sendSpam(AttackRequest attackRequest){
+        getVillagesForSpam().forEach(village -> {
+            attackRequest.setX(village.getX());
+            attackRequest.setY(village.getY());
+            scheduleAttack(attackRequest);
+            try {
+                TimeUnit.SECONDS.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
     }
 
     @Override
@@ -291,7 +305,7 @@ public class AttacksServiceImpl implements AttacksService{
         sharedService.getPage("build.php?tt=2&id=39");
     }
 
-    public List<Coordinates> getVillagesForSpam(){
+    private List<Coordinates> getVillagesForSpam(){
         final List<Coordinates> result = new ArrayList<>();
         if (sharedService.isLoggedOut()){sharedService.login();}
 
@@ -312,9 +326,12 @@ public class AttacksServiceImpl implements AttacksService{
 
             anchorList.forEach(htmlAnchor -> {
                 String[] textArr = htmlAnchor.getTextContent().split(" ");
-                String coords = textArr[textArr.length - 1];
+                String coords = textArr[textArr.length - 1]
+                        .replaceAll("[\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}]", "")
+                        .replaceAll("\u2212", "-");
                 String[] coordArr = coords.split("[(,|,)]");
-                result.add(new Coordinates(Integer.parseInt(coordArr[1]), Integer.parseInt(coordArr[2])));
+                result.add(new Coordinates(Integer.parseInt(coordArr[1]),
+                        Integer.parseInt(coordArr[2])));
             });
         } catch (IOException e) {
             e.printStackTrace();
