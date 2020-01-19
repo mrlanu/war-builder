@@ -1,5 +1,5 @@
 package io.lanu.travian.warbuilder.models;
 
 public enum CommandsEnum {
-    ATTACK, UPDATE, SPAM
+    ATTACK, ALL_VILLAGES, SPAM, TROOPS
 }
