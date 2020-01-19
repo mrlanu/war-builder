@@ -101,8 +101,11 @@ public class AttacksServiceImpl implements AttacksService{
         LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
         System.out.println("Server time - " + serverTime);
 
+        // for Postman
+        /*LocalDateTime attackRequestTime = new java.sql.Timestamp(
+                attackRequest.getTime().getTime()).toLocalDateTime().plusHours(6);*/
         LocalDateTime attackRequestTime = new java.sql.Timestamp(
-                attackRequest.getTime().getTime()).toLocalDateTime().plusHours(6);
+                attackRequest.getTime().getTime()).toLocalDateTime();
         System.out.println("Requested attack time - " + attackRequestTime);
 
         if (serverTime.isAfter(attackRequestTime)){
@@ -279,8 +282,12 @@ public class AttacksServiceImpl implements AttacksService{
             String attackId = attackRequest.getAttackId();
             long timeForAttack = waveRepository.findAllByAttackId(attackId).get(0).getTimeForAttack();
             LocalDateTime serverTime = LocalDateTime.now(ZoneId.of("Europe/Moscow")).truncatedTo(ChronoUnit.SECONDS);
+
+            //for Postman plus 6 hours
+            /*LocalDateTime attackRequestTime = new java.sql.Timestamp(
+                    attackRequest.getTime().getTime()).toLocalDateTime().plusHours(6);*/
             LocalDateTime attackRequestTime = new java.sql.Timestamp(
-                    attackRequest.getTime().getTime()).toLocalDateTime().plusHours(6);
+                    attackRequest.getTime().getTime()).toLocalDateTime();
             long availableTime = Duration.between(serverTime, attackRequestTime).toMillis()
                     - timeForAttack - attackRequest.getTimeCorrection();
 
@@ -318,7 +325,7 @@ public class AttacksServiceImpl implements AttacksService{
             //get last message with text 'spam or Spam'
             List<HtmlAnchor> anchorList =
                     page.getByXPath("//img[contains(@class, 'messageStatus')]//parent::a[1]" +
-                            "//following-sibling::a[contains(text(),'спам') or contains(text(),'Спам')]");
+                            "//following-sibling::a[contains(text(),'спам') or contains(text(),'Спам') or contains(text(),'Спамы')]");
             //go inside that message
             page = anchorList.get(0).click();
             //get all villages from message
