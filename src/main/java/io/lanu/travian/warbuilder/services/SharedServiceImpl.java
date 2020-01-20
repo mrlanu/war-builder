@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.List;
 import java.util.Set;
 
@@ -26,9 +25,11 @@ public class SharedServiceImpl implements SharedService {
     private WebClient webClient;
     private String cookie;
     private HtmlPage pSPage;
+    private Player player;
 
-    public SharedServiceImpl(WebClient webClient) {
+    public SharedServiceImpl(WebClient webClient, Player player) {
         this.webClient = webClient;
+        this.player = player;
     }
 
     @Override
@@ -42,7 +43,7 @@ public class SharedServiceImpl implements SharedService {
     }
 
     @Override
-    public void login(){
+    public boolean login(){
         String heroName = null;
         try {
             pSPage = webClient.getPage(server + "/dorf1.php");
@@ -52,14 +53,21 @@ public class SharedServiceImpl implements SharedService {
             HtmlCheckBoxInput checkBoxInput = loginForm.getInputByName("lowRes");
             checkBoxInput.setChecked(true);
             HtmlPasswordInput textFieldPass = loginForm.getInputByName("password");
-            textField.type(userName);
-            textFieldPass.type(password);
+            textField.type(player.getTravianUserName());
+            textFieldPass.type(player.getTravianPass());
 
             //Village Page
             pSPage = button.click();
 
             //get Hero name
-            HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) pSPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']").get(1);
+            List<HtmlAnchor> anchorList = pSPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']");
+
+            if (anchorList.size() < 1){
+                System.out.println("Login Failed. Try again.");
+                return false;
+            }
+
+            HtmlAnchor htmlAnchorHeroName = anchorList.get(1);
             heroName = htmlAnchorHeroName.asText();
 
             //get cookie
@@ -73,6 +81,7 @@ public class SharedServiceImpl implements SharedService {
         }
 
         System.out.println("Successfully logged in. Welcome - " + heroName);
+        return true;
     }
 
     @Override
@@ -95,7 +104,7 @@ public class SharedServiceImpl implements SharedService {
             HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) elements.get(1);
             heroName = htmlAnchorHeroName.asText();
         }
-        return !heroName.equals(userName);
+        return !heroName.equals(player.getTravianUserName());
     }
 
     public String getCookie() {

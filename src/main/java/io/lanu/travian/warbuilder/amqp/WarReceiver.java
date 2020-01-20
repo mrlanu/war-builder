@@ -22,7 +22,7 @@ public class WarReceiver {
 
     @RabbitHandler
     public void receive(CommandMessage commandMessage) {
-        if (player.getPlayerId().equals(commandMessage.getPlayerId())) {
+        if (player.getClientId().equals(commandMessage.getClientId())) {
             System.out.println(" [x] Received command for attack.");
             if (commandMessage.getCommand().equals(CommandsEnum.ATTACK)) {
                 attacksService.scheduleAttack(commandMessage.getAttackRequest());

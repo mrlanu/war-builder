@@ -6,5 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Data
 public class Player {
-    private String playerId;
+    private String clientId;
+    private String travianUserName;
+    private String travianPass;
 }

@@ -4,7 +4,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
 public interface SharedService {
     HtmlPage getPage(String url);
-    void login();
+    boolean login();
     void logout();
     boolean isLoggedOut();
     String getCookie();

@@ -12,20 +12,20 @@ import java.io.Serializable;
 @Setter
 @ToString
 public class CommandMessage implements Serializable {
-    private String playerId;
+    private String clientId;
     private CommandsEnum command;
     private String villageName;
     private AttackRequest attackRequest;
 
-    public CommandMessage(String playerId, CommandsEnum command, String villageName) {
-        this.playerId = playerId;
+    public CommandMessage(String clientId, CommandsEnum command, String villageName) {
+        this.clientId = clientId;
         this.command = command;
         this.villageName = villageName;
         this.attackRequest = null;
     }
 
-    public CommandMessage(String playerId, CommandsEnum command, AttackRequest attackRequest) {
-        this.playerId = playerId;
+    public CommandMessage(String clientId, CommandsEnum command, AttackRequest attackRequest) {
+        this.clientId = clientId;
         this.command = command;
         this.attackRequest = attackRequest;
     }
