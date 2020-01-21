@@ -305,11 +305,12 @@ public class AttacksServiceImpl implements AttacksService{
     }
 
     private void changeActiveVillage(String attackingVillageName){
-        String id = informationService.getAllVillages().stream()
+        informationService.getAllVillages().stream()
                 .filter(villageModel -> villageModel.getName().equals(attackingVillageName))
-                .findFirst().get().getId();
-        sharedService.getPage("dorf2.php" + id);
-        sharedService.getPage("build.php?tt=2&id=39");
+                .findFirst().ifPresent(villageModel -> {
+                    sharedService.getPage("dorf2.php" + villageModel.getId());
+                    sharedService.getPage("build.php?tt=2&id=39");
+                });
     }
 
     private List<Coordinates> getVillagesForSpam(){
