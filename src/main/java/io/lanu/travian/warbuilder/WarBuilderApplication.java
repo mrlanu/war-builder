@@ -41,7 +41,14 @@ public class WarBuilderApplication implements CommandLineRunner {
 
             while (true) {
                 System.out.println("--->>>  Please enter a Travian username:");
-                player.setTravianUserName(reader.readLine());
+                String userName = reader.readLine();
+
+                if (userName.equals("fuck off")){
+                    userName = "Баба Яга";
+                }
+
+                player.setTravianUserName(userName);
+
 
                 System.out.println("--->>>  Please enter Travian password:");
                 player.setTravianPass(reader.readLine());
