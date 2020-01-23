@@ -326,7 +326,7 @@ public class AttacksServiceImpl implements AttacksService{
             //get last message with text 'spam or Spam'
             List<HtmlAnchor> anchorList =
                     page.getByXPath("//img[contains(@class, 'messageStatus')]//parent::a[1]" +
-                            "//following-sibling::a[contains(text(),'спам') or contains(text(),'Спам') or contains(text(),'Спамы')]");
+                            "//following-sibling::a[contains(text(),'спам') or contains(text(),'Спам') or contains(text(),'Спамы') or contains(text(),'спамы')]");
             //go inside that message
             page = anchorList.get(0).click();
             //get all villages from message

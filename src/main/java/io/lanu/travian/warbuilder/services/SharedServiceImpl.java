@@ -60,15 +60,14 @@ public class SharedServiceImpl implements SharedService {
             pSPage = button.click();
 
             //get Hero name
-            List<HtmlAnchor> anchorList = pSPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']");
+            List<HtmlDivision> divisions = pSPage.getByXPath("//div[@class='playerName']");
 
-            if (anchorList.size() < 1){
+            if (divisions.size() < 1){
                 System.out.println("Login Failed. Try again.");
                 return false;
             }
 
-            HtmlAnchor htmlAnchorHeroName = anchorList.get(1);
-            heroName = htmlAnchorHeroName.asText();
+            heroName = divisions.get(0).getTextContent();
 
             //get cookie
             Set<Cookie> cookieSet = webClient.getCookies(pSPage.getUrl());
@@ -99,10 +98,10 @@ public class SharedServiceImpl implements SharedService {
     public boolean isLoggedOut(){
         if (pSPage == null){return true;}
         String heroName = "";
-        List<HtmlElement> elements = pSPage.getByXPath("//div[@class='playerName']//a[@href='spieler.php']");
+        List<HtmlElement> elements = pSPage.getByXPath("//div[@class='playerName']");
         if (elements.size() > 0){
-            HtmlAnchor htmlAnchorHeroName = (HtmlAnchor) elements.get(1);
-            heroName = htmlAnchorHeroName.asText();
+            HtmlDivision htmlDivHeroName = (HtmlDivision) elements.get(0);
+            heroName = htmlDivHeroName.getTextContent();
         }
         return !heroName.equals(player.getTravianUserName());
     }

@@ -23,7 +23,7 @@ public class InformationServiceImpl implements InformationService {
 
         HtmlPage currentPage = sharedService.getPage("dorf2.php");
         List<HtmlAnchor> anchors = currentPage
-                .getByXPath("//div[@id='sidebarBoxVillagelist']//div[@class='innerBox content']//a");
+                .getByXPath("//div[@id='sidebarBoxVillagelist']//div[@class='content']//a");
 
         return anchors.stream()
                 .map(htmlAnchor -> {
