@@ -57,7 +57,8 @@ public class AttacksServiceImpl implements AttacksService{
 
     @Override
     public void sendSpam(AttackRequest attackRequest){
-        getVillagesForSpam().forEach(village -> {
+        List<Coordinates> coordinates = getVillagesForSpam();
+        coordinates.forEach(village -> {
             attackRequest.setX(village.getX());
             attackRequest.setY(village.getY());
             scheduleAttack(attackRequest);
@@ -141,6 +142,9 @@ public class AttacksServiceImpl implements AttacksService{
 
         result = getTimeForAttack(presetAttack);
 
+        // check if get correct time, if something wrong result going to be equal 0
+        if (result == 0) return 0;
+
         if (!isEstimating){
             addAttackRequestToQueue(attackRequest, waveNumber, presetAttack, result);
         }
@@ -188,6 +192,9 @@ public class AttacksServiceImpl implements AttacksService{
     private long getTimeForAttack(String attackResponse){
         Document doc = Jsoup.parse(attackResponse);
         Element timeEl = doc.select(".in").first();
+
+        // check if get correct element, if something wrong result going to be equal 0
+        if (timeEl == null)return 0;
         String time = timeEl.wholeText().split(" ")[1];
         String[] timeArr = time.split(":");
         if (timeArr[0].length() == 1){
