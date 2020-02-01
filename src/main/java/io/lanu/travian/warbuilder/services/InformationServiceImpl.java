@@ -27,7 +27,7 @@ public class InformationServiceImpl implements InformationService {
 
         return anchors.stream()
                 .map(htmlAnchor -> {
-                    HtmlDivision d = (HtmlDivision) htmlAnchor.getElementsByAttribute("div", "class", "name").get(0);
+                    HtmlSpan d = (HtmlSpan) htmlAnchor.getElementsByAttribute("span", "class", "name").get(0);
                     return new VillageModel(d.getTextContent(), htmlAnchor.getHrefAttribute());
                 }).collect(Collectors.toList());
     }
