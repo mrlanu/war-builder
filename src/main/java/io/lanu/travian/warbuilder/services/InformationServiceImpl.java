@@ -17,6 +17,16 @@ public class InformationServiceImpl implements InformationService {
     }
 
     @Override
+    public void changeActiveVillage(String attackingVillageName){
+        getAllVillages().stream()
+                .filter(villageModel -> villageModel.getName().equals(attackingVillageName))
+                .findFirst().ifPresent(villageModel -> {
+            sharedService.getPage("dorf2.php" + villageModel.getId());
+            sharedService.getPage("build.php?tt=2&id=39");
+        });
+    }
+
+    @Override
     public List<VillageModel> getAllVillages(){
 
         if (sharedService.isLoggedOut()){sharedService.login();}

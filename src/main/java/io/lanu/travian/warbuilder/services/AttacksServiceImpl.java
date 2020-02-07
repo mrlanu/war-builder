@@ -75,7 +75,7 @@ public class AttacksServiceImpl implements AttacksService{
     public void scheduleAttack(AttackRequest attackRequest){
 
         if (sharedService.isLoggedOut()){sharedService.login();}
-        changeActiveVillage(attackRequest.getVillageName());
+        informationService.changeActiveVillage(attackRequest.getVillageName());
 
         if (attackRequest.isImmediately()){
             createAttack(attackRequest);
@@ -283,7 +283,7 @@ public class AttacksServiceImpl implements AttacksService{
 
             if (sharedService.isLoggedOut()){sharedService.login();}
 
-            changeActiveVillage(attackingVillageName);
+            informationService.changeActiveVillage(attackingVillageName);
 
             createAttack(attackRequest);
             String attackId = attackRequest.getAttackId();
@@ -309,15 +309,6 @@ public class AttacksServiceImpl implements AttacksService{
             System.out.println("<<<<-----All done----->>>>");
 
         }, sendingTime);
-    }
-
-    private void changeActiveVillage(String attackingVillageName){
-        informationService.getAllVillages().stream()
-                .filter(villageModel -> villageModel.getName().equals(attackingVillageName))
-                .findFirst().ifPresent(villageModel -> {
-                    sharedService.getPage("dorf2.php" + villageModel.getId());
-                    sharedService.getPage("build.php?tt=2&id=39");
-                });
     }
 
     private List<Coordinates> getVillagesForSpam(){
