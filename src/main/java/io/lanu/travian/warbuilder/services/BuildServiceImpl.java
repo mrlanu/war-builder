@@ -1,6 +1,7 @@
 package io.lanu.travian.warbuilder.services;
 
 import com.gargoylesoftware.htmlunit.html.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class BuildServiceImpl implements BuildService {
 
     private SharedService sharedService;
@@ -30,7 +32,7 @@ public class BuildServiceImpl implements BuildService {
 
         timer -= 600;
         if (timer > 0) {
-            System.out.println("Current timer: " + timer);
+            log.info("Current timer: " + timer);
             return;
         }
 
@@ -87,9 +89,9 @@ public class BuildServiceImpl implements BuildService {
             HtmlSpan timerSpan = (HtmlSpan) page.getByXPath("//span[@class='timer']").get(0);
             timer = Integer.parseInt(timerSpan.getAttribute("value"));
 
-            System.out.println("Upgrade has been set");
+            log.info("Upgrade has been set");
         } else {
-            System.out.println("Nothing available for upgrade");
+            log.info("Nothing available for upgrade");
         }
     }
 
@@ -112,7 +114,7 @@ public class BuildServiceImpl implements BuildService {
         int low = 1;
         int high = 10;
         int result = r.nextInt(high-low) + low;
-        System.out.println(String.format("Random sleep going to be %d seconds", result));
+        log.info(String.format("Random sleep going to be %d seconds", result));
         try {
             TimeUnit.SECONDS.sleep(result);
         } catch (InterruptedException e) {
