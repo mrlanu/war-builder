@@ -1,14 +1,14 @@
 package io.lanu.travian.warbuilder.services;
 
-import com.gargoylesoftware.htmlunit.html.HtmlButton;
-import com.gargoylesoftware.htmlunit.html.HtmlDivision;
-import com.gargoylesoftware.htmlunit.html.HtmlElement;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import com.gargoylesoftware.htmlunit.html.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -18,13 +18,21 @@ public class BuildServiceImpl implements BuildService {
     private SharedService sharedService;
     private InformationService informationService;
 
+    private static Integer timer = 0;
+
     public BuildServiceImpl(SharedService sharedService, InformationService informationService) {
         this.sharedService = sharedService;
         this.informationService = informationService;
     }
 
-    @Scheduled(fixedDelay = 300000, initialDelay = 30000)
-    public void test() throws IOException {
+    @Scheduled(fixedDelay = 600000, initialDelay = 30000)
+    public void upgradeSomething() throws IOException {
+
+        timer -= 600;
+        if (timer > 0) {
+            System.out.println("Current timer: " + timer);
+            return;
+        }
 
         List<Material> materials = Arrays.asList(
                 new Material("wood", 0, "gid1"),
@@ -38,8 +46,7 @@ public class BuildServiceImpl implements BuildService {
         if (sharedService.isLoggedOut()){sharedService.login();}
         informationService.changeActiveVillage("16pO5dZa78eBa7Lo");
 
-        HtmlPage page;
-        page = sharedService.getPage("/dorf1.php");
+        HtmlPage page = sharedService.getPage("/dorf1.php");
 
         materials.get(0).amount = Integer.parseInt(page.getHtmlElementById("l1").getTextContent()
                 .replaceAll("[\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}\\s]", ""));
@@ -50,37 +57,54 @@ public class BuildServiceImpl implements BuildService {
         materials.get(3).amount = Integer.parseInt(page.getHtmlElementById("l4").getTextContent()
                 .replaceAll("[\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}\\s]", ""));
 
-        HtmlElement cont = page.getHtmlElementById("resourceFieldContainer");
-
         Material minMaterial = materials
                 .stream()
                 .min(Comparator.comparingInt(a -> a.amount))
-                .get();
+                .orElse(materials.get(0));
 
-        System.out.println(minMaterial.name + " - " + minMaterial.amount);
+        HtmlElement fieldsContainer = page.getHtmlElementById("resourceFieldContainer");
 
-        List<HtmlDivision> divisions = cont.getElementsByTagName("div")
+        List<HtmlDivision> divsGoodForUpgrade = fieldsContainer.getElementsByTagName("div")
                 .stream()
                 .map(e -> (HtmlDivision) e)
-                .filter(e -> e.getAttribute("class").contains(minMaterial.label) &&
-                        e.getAttribute("class").contains("good"))
+                .filter(e -> e.getAttribute("class").contains("good"))
                 .collect(Collectors.toList());
 
-        System.out.println(divisions.get(0).getAttribute("onclick"));
+        if (divsGoodForUpgrade.size() > 0){
+            HtmlDivision divForUpgrade = divsGoodForUpgrade
+                    .stream()
+                    .filter(d -> d.getAttribute("class").contains(minMaterial.label))
+                    .min((a, b) -> {
+                        HtmlDivision divA = a.getFirstByXPath("div[@class='labelLayer']");
+                        HtmlDivision divB = b.getFirstByXPath("div[@class='labelLayer']");
+                        return Integer.parseInt(divA.getTextContent()) - Integer.parseInt(divB.getTextContent());
+                    })
+                    .orElseGet(() -> divsGoodForUpgrade.get(0));
 
-        String path = divisions.get(0).getAttribute("onclick").split("'")[1];
+            confirmUpgrade(divForUpgrade);
 
+            page = sharedService.getpSPage();
+            HtmlSpan timerSpan = (HtmlSpan) page.getByXPath("//span[@class='timer']").get(0);
+            timer = Integer.parseInt(timerSpan.getAttribute("value"));
+
+            System.out.println("Upgrade has been set");
+        } else {
+            System.out.println("Nothing available for upgrade");
+        }
+    }
+
+    private void confirmUpgrade(HtmlDivision division){
+
+        HtmlPage page;
+
+        String path = division.getAttribute("onclick").split("'")[1];
         page = sharedService.getPage(path);
 
-        HtmlDivision buttonDiv = (HtmlDivision) page.getByXPath("//div[@class='section1']").get(0);
-        HtmlButton button = (HtmlButton) buttonDiv.getElementsByTagName("button").get(0);
+        HtmlDivision buttonContainer = (HtmlDivision) page.getByXPath("//div[@class='section1']").get(0);
+        HtmlButton button = (HtmlButton) buttonContainer.getElementsByTagName("button").get(0);
 
         path = button.getAttribute("onclick").split("'")[1];
-
-        page = sharedService.getPage(path);
-
-        System.out.println(page.getUrl().getPath());
-        System.out.println("The end");
+        sharedService.getPage(path);
     }
 
     private void sleepRandom(){
